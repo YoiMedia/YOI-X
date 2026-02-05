@@ -12,13 +12,16 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  UserCircle,
+  ClipboardCheck,
+  FolderKanban,
+  FileBox,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRole, UserRole } from "@/contexts/RoleContext";
 
-const navItems = [
+const salesNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Client Portal", href: "/portal", icon: UserCircle },
   { title: "Clients", href: "/clients", icon: Users },
   { title: "Deals", href: "/deals", icon: Handshake },
   { title: "Proposals", href: "/proposals", icon: FileText },
@@ -29,9 +32,41 @@ const navItems = [
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
+const adminNavItems = [
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "Clients", href: "/clients", icon: Users },
+  { title: "Employees", href: "/employees", icon: UserCog },
+  { title: "Tasks", href: "/tasks", icon: CheckSquare },
+  { title: "Approvals", href: "/admin/approvals", icon: ClipboardCheck },
+  { title: "Settings", href: "/settings", icon: Settings },
+];
+
+const employeeNavItems = [
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "My Tasks", href: "/tasks", icon: CheckSquare },
+  { title: "Calendar", href: "/calendar", icon: Calendar },
+];
+
+const clientNavItems = [
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "My Projects", href: "/portal", icon: FolderKanban },
+  { title: "Documents", href: "/contracts", icon: FileBox },
+  { title: "Schedule Call", href: "/calendar/onboarding", icon: Phone },
+];
+
+const navItemsByRole: Record<UserRole, typeof salesNavItems> = {
+  sales: salesNavItems,
+  admin: adminNavItems,
+  employee: employeeNavItems,
+  client: clientNavItems,
+};
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { currentRole } = useRole();
+  
+  const navItems = navItemsByRole[currentRole];
 
   return (
     <aside
