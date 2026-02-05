@@ -1,4 +1,4 @@
-import { Users, FolderKanban, Clock, UserCheck, Plus, ListTodo, CheckCircle } from "lucide-react";
+import { Users, FolderKanban, Clock, UserCheck, AlertTriangle, Plus, ListTodo, CheckCircle } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 
 const activities = [
-  { id: 1, user: "Sarah Chen", initials: "SC", action: "submitted proposal for", target: "Q4 Campaign", time: "10 min ago" },
+  { id: 1, user: "Sarah Chen", initials: "SC", action: "sent proposal to", target: "TechStart Inc", time: "10 min ago" },
   { id: 2, user: "Mike Johnson", initials: "MJ", action: "closed deal with", target: "Acme Corp", time: "1 hour ago" },
   { id: 3, user: "Emily Davis", initials: "ED", action: "completed task", target: "Client onboarding", time: "2 hours ago" },
-  { id: 4, user: "Alex Rivera", initials: "AR", action: "requested approval for", target: "New timeline", time: "3 hours ago" },
+  { id: 4, user: "Alex Rivera", initials: "AR", action: "approved timeline for", target: "Website Redesign", time: "3 hours ago" },
 ];
 
 const employees = [
@@ -17,7 +17,6 @@ const employees = [
   { name: "Mike Johnson", tasks: 6, capacity: 10 },
   { name: "Emily Davis", tasks: 9, capacity: 10 },
   { name: "Alex Rivera", tasks: 4, capacity: 10 },
-  { name: "Jordan Lee", tasks: 7, capacity: 10 },
 ];
 
 export function AdminDashboard() {
@@ -44,7 +43,7 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard
           title="Total Clients"
           value="248"
@@ -73,6 +72,13 @@ export function AdminDashboard() {
           changeType="neutral"
           icon={UserCheck}
         />
+        <StatsCard
+          title="Tasks at Risk"
+          value="5"
+          change="3 overdue, 2 blocked"
+          changeType="negative"
+          icon={AlertTriangle}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -80,19 +86,26 @@ export function AdminDashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Employee Workload</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {employees.map((employee) => (
-              <div key={employee.name} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-foreground">{employee.name}</span>
-                  <span className="text-muted-foreground">
-                    {employee.tasks}/{employee.capacity} tasks
-                  </span>
+              <div
+                key={employee.name}
+                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    {employee.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-sm">{employee.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Progress value={(employee.tasks / employee.capacity) * 100} className="h-2 flex-1" />
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {employee.tasks}/{employee.capacity} tasks
+                    </span>
+                  </div>
                 </div>
-                <Progress 
-                  value={(employee.tasks / employee.capacity) * 100} 
-                  className="h-2"
-                />
               </div>
             ))}
           </CardContent>
@@ -102,11 +115,14 @@ export function AdminDashboard() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Recent Activity</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3">
+              <div
+                key={activity.id}
+                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+              >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-secondary text-foreground text-xs">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
                     {activity.initials}
                   </AvatarFallback>
                 </Avatar>
