@@ -1,7 +1,6 @@
 import { Shield, TrendingUp, User, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type UserRole = "admin" | "sales" | "employee" | "client";
+import { UserRole } from "@/contexts/RoleContext";
 
 interface RoleSwitcherProps {
   currentRole: UserRole;
