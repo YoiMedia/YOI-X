@@ -12,11 +12,13 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "Client Portal", href: "/portal", icon: UserCircle },
   { title: "Clients", href: "/clients", icon: Users },
   { title: "Deals", href: "/deals", icon: Handshake },
   { title: "Proposals", href: "/proposals", icon: FileText },

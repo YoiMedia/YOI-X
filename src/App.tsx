@@ -9,6 +9,7 @@ import Deals from "./pages/Deals";
 import Proposals from "./pages/Proposals";
 import Contracts from "./pages/Contracts";
 import Tasks from "./pages/Tasks";
+import ClientPortal from "./pages/ClientPortal";
 import Calendar from "./pages/Calendar";
 import Employees from "./pages/Employees";
 import Settings from "./pages/Settings";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/portal" element={<ClientPortal />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
