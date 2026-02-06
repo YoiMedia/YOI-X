@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MoreHorizontal, Trash2, FolderKanban, Calendar } from "lucide-react";
 import { useData } from "@/contexts/DataContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -23,11 +24,15 @@ const statusColors = {
 
 export default function Projects() {
     const { projects, isLoading, deleteProject } = useData();
+
+    if (isLoading) {
+        return <LoadingScreen message="Loading active projects..." />;
+    }
     const [searchQuery, setSearchQuery] = useState("");
 
     const filteredProjects = projects.filter(project =>
-        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.client.toLowerCase().includes(searchQuery.toLowerCase())
+        (project.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (project.client ?? "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
@@ -85,7 +90,7 @@ export default function Projects() {
                                             </div>
                                         </div>
                                         <Badge variant="outline" className={statusColors[project.status as keyof typeof statusColors] || "bg-gray-100"}>
-                                            {project.status.replace("_", " ")}
+                                            {(project.status ?? "pending").replace("_", " ")}
                                         </Badge>
                                         <span className="text-sm font-medium text-foreground w-20 text-right">{project.value}</span>
                                         <DropdownMenu>

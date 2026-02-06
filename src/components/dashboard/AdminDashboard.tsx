@@ -75,9 +75,9 @@ export function AdminDashboard() {
 
   // Derived Values
   const total_clients_count = clients.length;
-  const active_projects_count = projects.filter(p => p.status === "active").length;
-  const pending_approvals_count = pendingApprovals.length;
-  const active_employees_count = employees.length;
+  const active_projects_count = projects?.filter(p => p.status === "active").length;
+  const pending_approvals_count = pendingApprovals?.length;
+  const active_employees_count = employees?.length;
   const tasks_at_risk_count = projects.filter(p => p.status === "delayed").length +
     employees.filter(e => e.taskList.some(t => t.status === "Blocked" || t.priority === "High")).length;
 
@@ -338,13 +338,13 @@ export function AdminDashboard() {
           <CardContent className="space-y-3">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)
-            ) : activities.length === 0 ? (
+            ) : activities?.length === 0 ? (
               <div className="text-center py-10 text-muted-foreground border-2 border-dashed border-border rounded-lg">
                 <Inbox size={32} className="mx-auto mb-2 opacity-20" />
                 <p className="text-sm">No recent activity to show.</p>
               </div>
             ) : (
-              activities.map((activity) => (
+              activities?.map((activity) => (
                 <div
                   key={activity.id}
                   onClick={() => handleActivityClick(activity)}

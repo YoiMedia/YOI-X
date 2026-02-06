@@ -9,6 +9,7 @@ import { Plus, Search, MoreHorizontal } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,12 +27,16 @@ const statusColors = {
 export default function Clients() {
   const navigate = useNavigate();
   const { clients, isLoading, deleteClient } = useData();
+  
+  if (isLoading) {
+    return <LoadingScreen message="Fetching client directory..." />;
+  }
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.contact.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.contact ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (client.email ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -76,7 +81,7 @@ export default function Clients() {
                   <div key={client.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-secondary text-foreground text-sm">
-                        {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        {(client.name ?? "User").split(" ").map((n) => n[0]).join("").slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">

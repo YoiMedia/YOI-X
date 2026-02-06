@@ -12,8 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export default function Contracts() {
-  const { clients, activities, addActivity } = useData();
+  const { clients, activities, addActivity, isLoading } = useData();
+
+  if (isLoading) {
+    return <LoadingScreen message="Loading contract vaults..." />;
+  }
   const { toast } = useToast();
   const [isNewDocOpen, setIsNewDocOpen] = useState(false);
   const [docForm, setDocForm] = useState({ type: "nda", client: "", title: "" });
@@ -29,7 +35,7 @@ export default function Contracts() {
   }));
 
   // Derive Invoices from activities for a dynamic feel
-  const invoiceActivities = activities.filter(a => a.action_text.toLowerCase().includes("invoice"));
+  const invoiceActivities = activities.filter(a => (a.action_text ?? "").toLowerCase().includes("invoice"));
 
   const handleCreateDocument = () => {
     if (!docForm.client || !docForm.title) {

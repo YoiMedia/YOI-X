@@ -130,9 +130,17 @@ const priorityColors = {
   low: "bg-green-100 text-green-700",
 };
 
+import { useData } from "@/contexts/DataContext";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export function EmployeeDashboard() {
   const { toast } = useToast();
+  const { tasks: convexTasks, isLoading, updateTaskProgress, submitTask } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  if (isLoading) {
+    return <LoadingScreen message="Loading your task assignments..." />;
+  }
   
   // Tasks State
   const [tasks, setTasks] = useState<Task[]>(initialTasks);

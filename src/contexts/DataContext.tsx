@@ -1,8 +1,42 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useMemo } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Doc, Id } from "../../convex/_generated/dataModel";
+import { useAuth } from "./AuthContext";
 
+// Interfaces from Convex Data Model
+export type UserDoc = Doc<"users">;
+export type DocumentDoc = Doc<"documents">;
+export type MeetingDoc = Doc<"meetings">;
+export type MeetingOutcomeDoc = Doc<"meetingOutcomes">;
+export type NotificationDoc = Doc<"notifications">;
+export type RequirementDoc = Doc<"requirements">;
+export type TaskDoc = Doc<"tasks">;
+export type SubmissionDoc = Doc<"submissions">;
+export type DoubtDoc = Doc<"doubts">;
+
+// Activity and Approval Types for Dashboard
+export interface Activity {
+  id: string;
+  actor_name: string;
+  actor_initials: string;
+  action_text: string;
+  timestamp: string;
+}
+
+export interface PendingApproval {
+  id: string;
+  title: string;
+  client: string;
+  status: string;
+  urgent?: boolean;
+}
+
+// Legacy / Compatibility Interfaces
 export interface Client {
   id: string;
   name: string;
+  fullname: string;
   contact: string;
   email: string;
   status: "active" | "pending" | "inactive";
@@ -24,6 +58,7 @@ export interface Project {
 export interface Employee {
   id: string;
   name: string;
+  fullname: string;
   initials: string;
   role: string;
   department: string;
@@ -36,215 +71,237 @@ export interface Employee {
   taskList: Array<{ id: string; title: string; status: string; priority: string; dueDate?: string }>;
 }
 
-export interface Activity {
-  id: string;
-  actor_name: string;
-  actor_initials: string;
-  action_text: string;
-  timestamp: string;
-  details?: any;
-}
-
-export interface PendingApproval {
-  id: string;
-  title: string;
-  client: string;
-  urgent: boolean;
-}
-
 interface DataContextType {
-  clients: Client[];
-  projects: Project[];
-  employees: Employee[];
+  // Data
+  users: UserDoc[];
+  documents: DocumentDoc[];
+  meetings: MeetingDoc[];
+  requirements: RequirementDoc[];
+  tasks: TaskDoc[];
+  submissions: SubmissionDoc[];
+  notifications: NotificationDoc[];
   activities: Activity[];
   pendingApprovals: PendingApproval[];
   isLoading: boolean;
-  addClient: (client: Omit<Client, "id">) => void;
-  addActivity: (activity: Omit<Activity, "id">) => void;
-  addEmployee: (employee: Omit<Employee, "id" | "initials" | "tasks_assigned" | "on_leave" | "taskList">) => void;
-  updateEmployee: (id: string, updates: Partial<Employee>) => void;
-  addProject: (project: Omit<Project, "id">) => void;
-  approveTimeline: (id: string) => void;
-  deleteClient: (id: string) => void;
-  deleteEmployee: (id: string) => void;
-  deleteProject: (id: string) => void;
-  deleteTask: (employeeId: string, taskId: string) => void;
-  deleteApproval: (id: string) => void;
+
+  // Mutations
+  createUser: (args: any) => Promise<Id<"users">>;
+  createDocument: (args: any) => Promise<Id<"documents">>;
+  signDocument: (id: Id<"documents">, signature: string) => Promise<void>;
+  scheduleMeeting: (args: any) => Promise<Id<"meetings">>;
+  setMeetingStatus: (id: Id<"meetings">, status: "accepted" | "completed" | "cancelled") => Promise<void>;
+  addMeetingOutcome: (args: any) => Promise<Id<"meetingOutcomes">>;
+  createRequirements: (args: any) => Promise<Id<"requirements">>;
+  approveRequirements: (id: Id<"requirements">, status: "approved" | "rejected") => Promise<void>;
+  createTask: (args: any) => Promise<Id<"tasks">>;
+  updateTaskProgress: (id: Id<"tasks">, updates: any) => Promise<void>;
+  createDoubt: (args: any) => Promise<Id<"doubts">>;
+  resolveDoubt: (id: Id<"doubts">, response: string) => Promise<void>;
+  submitTask: (args: any) => Promise<Id<"submissions">>;
+  reviewSubmission: (id: Id<"submissions">, status: "approved" | "rejected", feedback?: string) => Promise<void>;
+  sendNotification: (args: any) => Promise<Id<"notifications">>;
+  markNotificationRead: (id: Id<"notifications">) => Promise<void>;
+
+  // Dashboard Mutations
+  addClient: (args: any) => Promise<void>;
+  addEmployee: (args: any) => Promise<void>;
+  updateEmployee: (id: string, updates: any) => Promise<void>;
+  addProject: (args: any) => Promise<void>;
+  addActivity: (args: any) => Promise<void>;
+  approveTimeline: (id: string) => Promise<void>;
+  deleteClient: (id: string) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  deleteProject: (id: string) => Promise<void>;
+
+  // Legacy (Adapters)
+  clients: Client[];
+  projects: Project[];
+  employees: Employee[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const initialApprovals: PendingApproval[] = [
-  { id: "app-1", title: "Website Redesign Timeline", client: "Acme Corp", urgent: true },
-  { id: "app-2", title: "Marketing Strategy Phase 2", client: "TechStart Inc", urgent: false },
-  { id: "app-3", title: "Mobile App Beta Release", client: "Innovation Labs", urgent: true },
-];
-
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const { user } = useAuth();
+  
+  // Queries
+  const allUsers = useQuery(api.users.list, {});
+  const myDocuments = useQuery(api.documents.listForUser, user ? { userId: user._id } : "skip");
+  const myMeetings = useQuery(api.meetings.listForClient, user?._id && user.role === "client" ? { clientId: user._id } : "skip");
+  const myRequirements = useQuery(api.requirements.listForClient, user?._id && user.role === "client" ? { clientId: user._id } : "skip");
+  const pendingRequirements = useQuery(api.requirements.listPending);
+  const myNotifications = useQuery(api.notifications.listForUser, user ? { userId: user._id } : "skip");
+  const myTasks = useQuery(api.tasks.listForEmployee, user?._id && user.role === "employee" ? { employeeId: user._id } : "skip");
+  
+  const convexClientsData = useQuery(api.clients.list);
+  const convexProjectsData = useQuery(api.projects.list);
+  const convexEmployeesData = useQuery(api.employees.list);
+  
+  const convexActivitiesData = useQuery(api.activities.list);
+  const convexApprovalsData = useQuery(api.approvals.list);
 
-  // Load from localStorage on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const storedClients = localStorage.getItem("ec_clients");
-      const storedProjects = localStorage.getItem("ec_projects");
-      const storedEmployees = localStorage.getItem("ec_employees");
-      const storedActivities = localStorage.getItem("ec_activities");
-      const storedApprovals = localStorage.getItem("ec_approvals");
+  // Mutations
+  const registerUser = useMutation(api.users.create);
+  const createDocMutation = useMutation(api.documents.create);
+  const signDocMutation = useMutation(api.documents.sign);
+  const scheduleMeetMutation = useMutation(api.meetings.schedule);
+  const setMeetStatusMutation = useMutation(api.meetings.setStatus);
+  const addOutcomeMutation = useMutation(api.meetings.addOutcome);
+  const createReqMutation = useMutation(api.requirements.create);
+  const setReqStatusMutation = useMutation(api.requirements.setStatus);
+  const createTaskMutation = useMutation(api.tasks.create);
+  const updateTaskMutation = useMutation(api.tasks.updateProgress);
+  const createDoubtMutation = useMutation(api.tasks.createDoubt);
+  const resolveDoubtMutation = useMutation(api.tasks.resolveDoubt);
+  const submitTaskMutation = useMutation(api.submissions.create);
+  const reviewSubmissionMutation = useMutation(api.submissions.setStatus);
+  const sendNotifMutation = useMutation(api.notifications.send);
+  const markReadMutation = useMutation(api.notifications.markAsRead);
 
-      // Production-ready: Initializing with empty states
-      setClients(storedClients ? JSON.parse(storedClients) : []);
-      setEmployees(storedEmployees ? JSON.parse(storedEmployees) : []);
-      setActivities(storedActivities ? JSON.parse(storedActivities) : []);
-      setProjects(storedProjects ? JSON.parse(storedProjects) : []);
-      setPendingApprovals(storedApprovals ? JSON.parse(storedApprovals) : initialApprovals);
+  // Dashboard Mutations
+  const addClientMutation = useMutation(api.clients.add);
+  const removeClientMutation = useMutation(api.clients.remove);
+  const addEmployeeMutation = useMutation(api.employees.add);
+  const updateEmployeeMutation = useMutation(api.employees.update);
+  const removeEmployeeMutation = useMutation(api.employees.remove);
+  const addProjectMutation = useMutation(api.projects.add);
+  const removeProjectMutation = useMutation(api.projects.remove);
+  const addActivityMutation = useMutation(api.activities.add);
+  const removeApprovalMutation = useMutation(api.approvals.remove);
 
-      setIsLoading(false);
-    }, 1000); // Simulate network latency
+  const isLoading = allUsers === undefined;
 
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Save to localStorage when state changes
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem("ec_clients", JSON.stringify(clients));
-      localStorage.setItem("ec_projects", JSON.stringify(projects));
-      localStorage.setItem("ec_employees", JSON.stringify(employees));
-      localStorage.setItem("ec_activities", JSON.stringify(activities));
-      localStorage.setItem("ec_approvals", JSON.stringify(pendingApprovals));
-    }
-  }, [clients, projects, employees, activities, pendingApprovals, isLoading]);
-
-  const addClient = (client: Omit<Client, "id">) => {
-    const newClient = { ...client, id: Math.random().toString(36).substr(2, 9) };
-    setClients(prev => [...prev, newClient]);
+  // Wrapper functions
+  const signDocument = async (id: Id<"documents">, signatureDetails: string) => {
+    await signDocMutation({ id, signatureDetails });
+  };
+  const setMeetingStatus = async (id: Id<"meetings">, status: "accepted" | "completed" | "cancelled") => {
+    await setMeetStatusMutation({ id, status });
+  };
+  const approveRequirements = async (id: Id<"requirements">, status: "approved" | "rejected") => {
+    await setReqStatusMutation({ id, status });
+  };
+  const updateTaskProgress = async (id: Id<"tasks">, updates: any) => {
+    await updateTaskMutation({ id, ...updates });
+  };
+  const resolveDoubt = async (id: Id<"doubts">, response: string) => {
+    await resolveDoubtMutation({ id, response });
+  };
+  const reviewSubmission = async (id: Id<"submissions">, status: "approved" | "rejected", feedback?: string) => {
+    await reviewSubmissionMutation({ id, status, feedback });
+  };
+  const markNotificationRead = async (id: Id<"notifications">) => {
+    await markReadMutation({ id });
   };
 
-  const addActivity = (activity: Omit<Activity, "id">) => {
-    const newActivity = { ...activity, id: Math.random().toString(36).substr(2, 9) };
-    setActivities(prev => [newActivity, ...prev]);
-  };
+  // Dashboard Wrapper functions
+  const addClient = async (args: any) => { await addClientMutation(args); };
+  const addEmployee = async (args: any) => { await addEmployeeMutation({ ...args, initials: (args.name ?? "User Staff").split(" ").map((n: string) => n[0]).join(""), taskList: [] }); };
+  const updateEmployee = async (id: string, updates: any) => { await updateEmployeeMutation({ id: id as Id<"employees">, updates }); };
+  const addProject = async (args: any) => { await addProjectMutation(args); };
+  const addActivity = async (args: any) => { await addActivityMutation(args); };
+  const approveTimeline = async (id: string) => { await removeApprovalMutation({ id: id as any }); }; // Logic depends on how approvals work
+  const deleteClient = async (id: string) => { await removeClientMutation({ id: id as Id<"clients"> }); };
+  const deleteEmployee = async (id: string) => { await removeEmployeeMutation({ id: id as Id<"employees"> }); };
+  const deleteProject = async (id: string) => { await removeProjectMutation({ id: id as Id<"projects"> }); };
 
-  const addEmployee = (employeeData: Omit<Employee, "id" | "initials" | "tasks_assigned" | "on_leave" | "taskList">) => {
-    const initials = employeeData.name.split(" ").map(n => n[0]).join("").toUpperCase();
-    const newEmployee: Employee = {
-      ...employeeData,
-      id: Math.random().toString(36).substr(2, 9),
-      initials,
-      tasks_assigned: 0,
-      on_leave: false,
-      taskList: [
-        { id: Math.random().toString(36).substr(2, 9), title: "Complete compliance training", status: "Not Started", priority: "Low", dueDate: "Feb 15" },
-        { id: Math.random().toString(36).substr(2, 9), title: "Update bio and profile", status: "In Progress", priority: "Medium", dueDate: "Feb 10" }
-      ]
-    };
-    setEmployees(prev => [...prev, newEmployee]);
-  };
-
-  const updateEmployee = (id: string, updates: Partial<Employee>) => {
-    setEmployees(prev => prev.map(emp => emp.id === id ? { ...emp, ...updates } : emp));
-  };
-
-  const addProject = (project: Omit<Project, "id">) => {
-    const newProject = { ...project, id: Math.random().toString(36).substr(2, 9) };
-    setProjects(prev => [...prev, newProject]);
-  };
-
-  const approveTimeline = (id: string) => {
-    setPendingApprovals(prev => prev.filter(app => app.id !== id));
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `approved timeline for project appraisal`,
-      timestamp: "Just now"
-    });
-  };
-
-  const deleteClient = (id: string) => {
-    const client = clients.find(c => c.id === id);
-    if (!client) return;
-    setClients(prev => prev.filter(c => c.id !== id));
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `deleted client: ${client.name}`,
-      timestamp: "Just now"
-    });
-  };
-
-  const deleteEmployee = (id: string) => {
-    const employee = employees.find(e => e.id === id);
-    if (!employee) return;
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `removed employee: ${employee.name}`,
-      timestamp: "Just now"
-    });
-  };
-
-  const deleteProject = (id: string) => {
-    const project = projects.find(p => p.id === id);
-    if (!project) return;
-    setProjects(prev => prev.filter(p => p.id !== id));
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `deleted project: ${project.name}`,
-      timestamp: "Just now"
-    });
-  };
-
-  const deleteTask = (employeeId: string, taskId: string) => {
-    const emp = employees.find(e => e.id === employeeId);
-    if (!emp) return;
-    const task = emp.taskList.find(t => t.id === taskId);
-    if (!task) return;
-
-    setEmployees(prev => prev.map(e => {
-      if (e.id === employeeId) {
-        return {
-          ...e,
-          tasks_assigned: Math.max(0, e.tasks_assigned - 1),
-          taskList: e.taskList.filter(t => t.id !== taskId)
-        };
-      }
-      return e;
+  // Adapters - Mapping Convex schema to legacy UI expectations
+  const clients: Client[] = useMemo(() => {
+    return (convexClientsData ?? []).map(c => ({
+      ...c,
+      id: c._id,
+      name: c.name ?? "Unnamed Client",
+      fullname: c.name ?? "Unnamed Client",
+      contact: c.contact ?? "No contact",
+      email: c.email ?? "no-email@example.com",
+      status: (c.status as any) ?? "pending",
+      value: c.value ?? "₹0",
     }));
+  }, [convexClientsData]);
 
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `deleted task "${task.title}" for ${emp.name}`,
-      timestamp: "Just now"
-    });
-  };
+  const projects: Project[] = useMemo(() => {
+    return (convexProjectsData ?? []).map(p => ({
+      ...p,
+      id: p._id,
+      name: p.name ?? "Unnamed Project",
+      client: p.client ?? "Unknown Client",
+      status: (p.status as any) ?? "active",
+      deadline: p.deadline ?? "TBD",
+      value: p.value ?? "₹0",
+    }));
+  }, [convexProjectsData]);
 
-  const deleteApproval = (id: string) => {
-    const approval = pendingApprovals.find(a => a.id === id);
-    if (!approval) return;
-    setPendingApprovals(prev => prev.filter(a => a.id !== id));
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `dismissed/deleted approval: ${approval.title}`,
-      timestamp: "Just now"
-    });
+  const employees: Employee[] = useMemo(() => {
+    return (convexEmployeesData ?? []).map(e => ({
+      ...e,
+      id: e._id,
+      name: e.name ?? "Unnamed Employee",
+      fullname: e.name ?? "Unnamed Employee",
+      initials: e.initials ?? "E",
+      role: e.role ?? "Staff",
+      department: e.department ?? "General",
+      email: e.email ?? "no-email@example.com",
+      phone: e.phone ?? "N/A",
+      status: (e.status as any) ?? "offline",
+      tasks_assigned: e.tasks_assigned ?? 0,
+      tasks_capacity: e.tasks_capacity ?? 0,
+      on_leave: e.on_leave ?? false,
+      taskList: e.taskList ?? [],
+    }));
+  }, [convexEmployeesData]);
+
+  const activities: Activity[] = useMemo(() => {
+    return (convexActivitiesData ?? []).map(a => ({ ...a, id: a._id }));
+  }, [convexActivitiesData]);
+
+  const pendingApprovals: PendingApproval[] = useMemo(() => {
+    return (convexApprovalsData ?? []).map(ap => ({ ...ap, id: ap._id, status: ap.status || "pending" }));
+  }, [convexApprovalsData]);
+
+  const value: DataContextType = {
+    users: allUsers ?? [],
+    documents: myDocuments ?? [],
+    meetings: myMeetings ?? [],
+    requirements: (user?.role === "client" ? myRequirements : pendingRequirements) ?? [],
+    tasks: myTasks ?? [],
+    submissions: [],
+    notifications: myNotifications ?? [],
+    activities,
+    pendingApprovals,
+    isLoading,
+    
+    createUser: registerUser,
+    createDocument: createDocMutation,
+    signDocument,
+    scheduleMeeting: scheduleMeetMutation,
+    setMeetingStatus,
+    addMeetingOutcome: addOutcomeMutation,
+    createRequirements: createReqMutation,
+    approveRequirements,
+    createTask: createTaskMutation,
+    updateTaskProgress,
+    createDoubt: createDoubtMutation,
+    resolveDoubt,
+    submitTask: submitTaskMutation,
+    reviewSubmission,
+    sendNotification: sendNotifMutation,
+    markNotificationRead,
+
+    addClient,
+    addEmployee,
+    updateEmployee,
+    addProject,
+    addActivity,
+    approveTimeline,
+    deleteClient,
+    deleteEmployee,
+    deleteProject,
+    
+    clients, projects, employees,
   };
 
   return (
-    <DataContext.Provider value={{
-      clients, projects, employees, activities, pendingApprovals, isLoading,
-      addClient, addActivity, addEmployee, updateEmployee, addProject, approveTimeline,
-      deleteClient, deleteEmployee, deleteProject, deleteTask, deleteApproval
-    }}>
+    <DataContext.Provider value={value}>
       {children}
     </DataContext.Provider>
   );

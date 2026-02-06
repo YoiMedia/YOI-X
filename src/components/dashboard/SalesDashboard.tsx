@@ -165,12 +165,12 @@ export function SalesDashboard() {
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 border border-border">
                         <AvatarFallback className="bg-primary/5 text-primary text-xs">
-                          {lead.name.split(" ").map(n => n[0]).join("")}
+                          {(lead.name ?? "L").split(" ").map(n => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="text-sm font-medium leading-none">{lead.name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{lead.contact}</p>
+                        <p className="text-sm font-medium leading-none">{lead.name ?? "New Lead"}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{lead.contact ?? "No contact info"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">

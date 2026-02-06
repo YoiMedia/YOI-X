@@ -13,11 +13,17 @@ const statusColors = {
   declined: "bg-red-100 text-red-700 border-red-200",
 };
 
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export default function Proposals() {
-  const { activities } = useData();
+  const { activities, isLoading } = useData();
+
+  if (isLoading) {
+    return <LoadingScreen message="Accessing proposal drafts..." />;
+  }
 
   // Derive proposals from activities for demonstration
-  const proposalActions = activities.filter(a => a.action_text.toLowerCase().includes("proposal"));
+  const proposalActions = activities.filter(a => (a.action_text ?? "").toLowerCase().includes("proposal"));
 
   return (
     <AppLayout title="Proposals">
@@ -54,9 +60,9 @@ export default function Proposals() {
                       </div>
                       <div>
                         <CardTitle className="text-sm font-semibold truncate max-w-[150px]">
-                          {action.action_text.split(":")[1]?.trim() || "New Proposal"}
+                          {(action.action_text ?? "").split(":")[1]?.trim() || "New Proposal"}
                         </CardTitle>
-                        <p className="text-xs text-muted-foreground mt-0.5">{action.actor_name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{action.actor_name ?? "System"}</p>
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100">

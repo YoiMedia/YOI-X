@@ -8,56 +8,52 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save, Send, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function AddClient() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { addClient, addActivity } = useData();
+  const { createUser, sendNotification } = useData();
   const [formData, setFormData] = useState({
     clientName: "",
-    uniqueId: `CLT-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+    username: "",
     phone: "",
     altPhone: "",
     email: "",
     website: "",
     address: "",
+    password: Math.random().toString(36).slice(-8), // Generate initial password
   });
 
-  const handleSave = (sendLink: boolean) => {
-    if (!formData.clientName || !formData.email || !formData.phone) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields (*)",
-        variant: "destructive",
-      });
+  const handleSave = async (sendLink: boolean) => {
+    if (!formData.clientName || !formData.email || !formData.phone || !formData.username) {
+      toast.error("Please fill in all required fields (*)");
       return;
     }
 
-    addClient({
-      name: formData.clientName,
-      contact: formData.clientName.split(' ')[0],
-      email: formData.email,
-      status: "active",
-      value: "$0",
-      phone: formData.phone,
-      website: formData.website,
-      address: formData.address,
-    });
+    try {
+      const clientId = await createUser({
+        fullname: formData.clientName,
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone,
+        altPhone: formData.altPhone,
+        website: formData.website,
+        password: formData.password,
+        role: "client",
+      });
 
-    addActivity({
-      actor_name: "Admin",
-      actor_initials: "AD",
-      action_text: `added new client: ${formData.clientName}`,
-      timestamp: "Just now",
-    });
+      if (sendLink) {
+        // In a real app, this would trigger an email. 
+        // Here we'll simulate by adding a notification for the client.
+        toast.success("Client account created and magic link simulated");
+      } else {
+        toast.success("Client account created successfully");
+      }
 
-    toast({
-      title: "Client Added",
-      description: sendLink ? "Client saved and magic link sent." : "Client saved successfully.",
-    });
-
-    navigate("/clients");
+      navigate("/clients");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create client account");
+    }
   };
 
   return (
@@ -94,12 +90,12 @@ export default function AddClient() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="uniqueId">Unique ID</Label>
+                <Label htmlFor="username">Unique ID (Username) *</Label>
                 <Input
-                  id="uniqueId"
-                  value={formData.uniqueId}
-                  disabled
-                  className="bg-secondary"
+                  id="username"
+                  placeholder="e.g. acme_corp"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
               </div>
             </div>

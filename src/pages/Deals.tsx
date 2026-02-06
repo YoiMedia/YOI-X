@@ -11,8 +11,14 @@ const stages = [
   { id: "inactive", name: "Inactive", color: "bg-gray-500/10 text-gray-700" },
 ];
 
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export default function Deals() {
   const { clients, isLoading } = useData();
+
+  if (isLoading) {
+    return <LoadingScreen message="Visualizing sales pipeline..." />;
+  }
 
   return (
     <AppLayout title="Pipeline">
@@ -45,7 +51,7 @@ export default function Deals() {
                   ))
                 ) : clients.filter(c => c.status === stage.id).length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-32 text-muted-foreground/40 italic text-sm">
-                    No items in {stage.name.toLowerCase()}
+                    No items in {(stage.name ?? "").toLowerCase()}
                   </div>
                 ) : (
                   clients

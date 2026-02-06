@@ -156,9 +156,17 @@ function Confetti({ show }: { show: boolean }) {
   );
 }
 
+import { useData } from "@/contexts/DataContext";
+import { LoadingScreen } from "@/components/ui/loading-screen";
+
 export function ClientDashboard() {
   const { toast } = useToast();
+  const { projects: convexProjects, isLoading } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  if (isLoading) {
+    return <LoadingScreen message="Unlocking your client portal..." />;
+  }
   
   // Projects State
   const [projects, setProjects] = useState<Project[]>(initialProjects);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -16,9 +16,10 @@ import {
   FolderKanban,
   FileBox,
   Phone,
+  LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRole, UserRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const salesNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -56,7 +57,7 @@ const clientNavItems = [
   { title: "Schedule Call", href: "/calendar/onboarding", icon: Phone },
 ];
 
-const navItemsByRole: Record<UserRole, typeof salesNavItems> = {
+const navItemsByRole: any = {
   sales: salesNavItems,
   admin: adminNavItems,
   employee: employeeNavItems,
@@ -66,9 +67,17 @@ const navItemsByRole: Record<UserRole, typeof salesNavItems> = {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { currentRole } = useRole();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  const navItems = navItemsByRole[currentRole];
+  if (!user) return null;
+
+  const navItems = navItemsByRole[user.role] || [];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <aside
@@ -98,7 +107,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.map((item: any) => {
           const isActive = location.pathname === item.href;
           return (
             <NavLink
@@ -118,9 +127,19 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-2">
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
+            collapsed && "justify-center"
+          )}
+        >
+          <LogOut size={18} className="flex-shrink-0" />
+          {!collapsed && <span>Logout</span>}
+        </button>
         {!collapsed && (
-          <div className="text-xs text-sidebar-foreground">
+          <div className="text-[10px] text-sidebar-foreground/50 text-center">
             © 2026 YOI MEDIA Inc.
           </div>
         )}
