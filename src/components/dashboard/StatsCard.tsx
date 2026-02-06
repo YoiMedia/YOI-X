@@ -8,11 +8,18 @@ interface StatsCardProps {
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
   icon: LucideIcon;
+  onClick?: () => void;
 }
 
-export function StatsCard({ title, value, change, changeType = "neutral", icon: Icon }: StatsCardProps) {
+export function StatsCard({ title, value, change, changeType = "neutral", icon: Icon, onClick }: StatsCardProps) {
   return (
-    <Card className="border-border">
+    <Card 
+      className={cn(
+        "border-border transition-all",
+        onClick && "cursor-pointer hover:border-primary/50 hover:shadow-md"
+      )}
+      onClick={onClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
