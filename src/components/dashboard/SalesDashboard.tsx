@@ -1,40 +1,149 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Handshake, FileText, FileSignature, Phone, CheckSquare, Plus, Calendar as CalendarIcon, User, Clock } from "lucide-react";
+import { Handshake, FileText, FileSignature, Phone, CheckSquare, Plus, Calendar as CalendarIcon, User, Clock, X, Video, Mail, MapPin, ExternalLink, Download } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-const initialUpcomingCalls = [
-  { id: 1, client: "Acme Corp", contact: "John Smith", time: "10:00 AM", date: "Today" },
-  { id: 2, client: "TechStart Inc", contact: "Sarah Lee", time: "2:30 PM", date: "Today" },
-  { id: 3, client: "Global Partners", contact: "Mike Chen", time: "9:00 AM", date: "Tomorrow" },
-  { id: 4, client: "Innovation Labs", contact: "Emily Davis", time: "11:00 AM", date: "Tomorrow" },
+interface Call {
+  id: number;
+  client: string;
+  contact: string;
+  time: string;
+  date: string;
+  email?: string;
+  phone?: string;
+  meetingLink?: string;
+  notes?: string;
+  attendees?: string[];
+}
+
+interface Task {
+  id: number;
+  title: string;
+  priority: "high" | "medium" | "low";
+  dueDate: string;
+  description?: string;
+  status?: "not_started" | "in_progress" | "completed";
+  relatedClient?: string;
+  assignee?: string;
+}
+
+const initialUpcomingCalls: Call[] = [
+  { 
+    id: 1, 
+    client: "Acme Corp", 
+    contact: "John Smith", 
+    time: "10:00 AM", 
+    date: "Today",
+    email: "john.smith@acmecorp.com",
+    phone: "+1 (555) 123-4567",
+    meetingLink: "https://meet.google.com/abc-defg-hij",
+    notes: "Discuss Q2 expansion plans and budget allocation for new marketing initiatives.",
+    attendees: ["Sarah Johnson", "Mike Thompson"]
+  },
+  { 
+    id: 2, 
+    client: "TechStart Inc", 
+    contact: "Sarah Lee", 
+    time: "2:30 PM", 
+    date: "Today",
+    email: "sarah.lee@techstart.io",
+    phone: "+1 (555) 234-5678",
+    meetingLink: "https://zoom.us/j/123456789",
+    notes: "Initial discovery call to understand their software needs.",
+    attendees: ["Emily Chen"]
+  },
+  { 
+    id: 3, 
+    client: "Global Partners", 
+    contact: "Mike Chen", 
+    time: "9:00 AM", 
+    date: "Tomorrow",
+    email: "m.chen@globalpartners.com",
+    phone: "+1 (555) 345-6789",
+    notes: "Follow-up on proposal sent last week.",
+    attendees: ["David Wilson", "Lisa Anderson"]
+  },
+  { 
+    id: 4, 
+    client: "Innovation Labs", 
+    contact: "Emily Davis", 
+    time: "11:00 AM", 
+    date: "Tomorrow",
+    email: "emily.d@innovationlabs.com",
+    phone: "+1 (555) 456-7890",
+    notes: "Contract negotiation meeting.",
+    attendees: []
+  },
 ];
 
-const tasks = [
-  { id: 1, title: "Follow up with Acme Corp", priority: "high", dueDate: "Today" },
-  { id: 2, title: "Prepare proposal for TechStart", priority: "high", dueDate: "Tomorrow" },
-  { id: 3, title: "Update pricing sheet", priority: "medium", dueDate: "Feb 7" },
-  { id: 4, title: "Send contract to Global Partners", priority: "medium", dueDate: "Feb 8" },
+const initialTasks: Task[] = [
+  { 
+    id: 1, 
+    title: "Follow up with Acme Corp", 
+    priority: "high", 
+    dueDate: "Today",
+    description: "Send follow-up email regarding the proposal and schedule a call to discuss next steps.",
+    status: "in_progress",
+    relatedClient: "Acme Corp",
+    assignee: "Sarah Johnson"
+  },
+  { 
+    id: 2, 
+    title: "Prepare proposal for TechStart", 
+    priority: "high", 
+    dueDate: "Tomorrow",
+    description: "Create a comprehensive proposal including pricing, timeline, and deliverables for the software development project.",
+    status: "in_progress",
+    relatedClient: "TechStart Inc",
+    assignee: "You"
+  },
+  { 
+    id: 3, 
+    title: "Update pricing sheet", 
+    priority: "medium", 
+    dueDate: "Feb 7",
+    description: "Review and update the Q1 pricing sheet with new service offerings and adjusted rates.",
+    status: "not_started",
+    assignee: "You"
+  },
+  { 
+    id: 4, 
+    title: "Send contract to Global Partners", 
+    priority: "medium", 
+    dueDate: "Feb 8",
+    description: "Finalize and send the service agreement contract for signature.",
+    status: "not_started",
+    relatedClient: "Global Partners",
+    assignee: "Mike Thompson"
+  },
 ];
 
 const priorityColors = {
   high: "bg-red-100 text-red-700 border-red-200",
   medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
   low: "bg-green-100 text-green-700 border-green-200",
+};
+
+const statusColors = {
+  not_started: "bg-gray-100 text-gray-700",
+  in_progress: "bg-blue-100 text-blue-700",
+  completed: "bg-green-100 text-green-700",
 };
 
 const timeSlots = [
@@ -75,8 +184,19 @@ export function SalesDashboard() {
   const [callNotes, setCallNotes] = useState("");
   const [callClient, setCallClient] = useState("");
   
-  // Upcoming Calls State (for adding new calls visually)
-  const [upcomingCalls, setUpcomingCalls] = useState(initialUpcomingCalls);
+  // Upcoming Calls State
+  const [upcomingCalls, setUpcomingCalls] = useState<Call[]>(initialUpcomingCalls);
+  
+  // Tasks State
+  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+
+  // Call Details Panel State
+  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [isCallDetailsOpen, setIsCallDetailsOpen] = useState(false);
+
+  // Task Details Sidebar State
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
 
   // Scroll to upcoming calls panel
   const scrollToUpcomingCalls = () => {
@@ -124,12 +244,14 @@ export function SalesDashboard() {
 
   const handleConfirmCall = () => {
     if (callDate && callTime && callClient) {
-      const newCall = {
+      const newCall: Call = {
         id: upcomingCalls.length + 1,
         client: callClient,
         contact: employees.find(e => selectedEmployees.includes(e.id))?.name || "TBD",
         time: callTime,
         date: format(callDate, "MMM d"),
+        notes: callNotes,
+        attendees: selectedEmployees.map(id => employees.find(e => e.id === id)?.name || ""),
       };
       setUpcomingCalls([...upcomingCalls, newCall]);
       setIsScheduleCallOpen(false);
@@ -152,6 +274,37 @@ export function SalesDashboard() {
         ? prev.filter(id => id !== employeeId)
         : [...prev, employeeId]
     );
+  };
+
+  const handleCallClick = (call: Call) => {
+    setSelectedCall(call);
+    setIsCallDetailsOpen(true);
+  };
+
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsTaskSidebarOpen(true);
+  };
+
+  const handleTaskStatusChange = (taskId: number, newStatus: Task["status"]) => {
+    setTasks(prev => prev.map(t => {
+      if (t.id === taskId) {
+        const updated = { ...t, status: newStatus };
+        if (selectedTask?.id === taskId) {
+          setSelectedTask(updated);
+        }
+        return updated;
+      }
+      return t;
+    }));
+    toast({
+      title: "Task updated",
+      description: `Status changed to ${newStatus?.replace("_", " ")}`,
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(" ").map(n => n[0]).join("").toUpperCase();
   };
 
   return (
@@ -229,7 +382,8 @@ export function SalesDashboard() {
             {upcomingCalls.map((call) => (
               <div
                 key={call.id}
-                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                onClick={() => handleCallClick(call)}
+                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
               >
                 <div className="p-2 rounded-lg bg-primary/10">
                   <Phone size={16} className="text-primary" />
@@ -255,11 +409,21 @@ export function SalesDashboard() {
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                onClick={() => handleTaskClick(task)}
+                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
               >
-                <Checkbox />
+                <Checkbox 
+                  checked={task.status === "completed"}
+                  onClick={(e) => e.stopPropagation()}
+                  onCheckedChange={(checked) => {
+                    handleTaskStatusChange(task.id, checked ? "completed" : "not_started");
+                  }}
+                />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">{task.title}</p>
+                  <p className={cn(
+                    "font-medium",
+                    task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"
+                  )}>{task.title}</p>
                   <p className="text-xs text-muted-foreground">Due: {task.dueDate}</p>
                 </div>
                 <Badge variant="outline" className={priorityColors[task.priority]}>
@@ -482,6 +646,222 @@ export function SalesDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Call Details Panel */}
+      <Dialog open={isCallDetailsOpen} onOpenChange={setIsCallDetailsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone size={20} className="text-primary" />
+              Call Details
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedCall && (
+            <div className="space-y-4 py-4">
+              {/* Client Info */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                <Avatar className="h-12 w-12">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {getInitials(selectedCall.client)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-foreground">{selectedCall.client}</p>
+                  <p className="text-sm text-muted-foreground">{selectedCall.contact}</p>
+                </div>
+              </div>
+
+              {/* Time & Date */}
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                <CalendarIcon size={18} className="text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{selectedCall.time}</p>
+                  <p className="text-sm text-muted-foreground">{selectedCall.date}</p>
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              <div className="space-y-2">
+                {selectedCall.email && (
+                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
+                    <Mail size={16} className="text-muted-foreground" />
+                    <span className="text-sm">{selectedCall.email}</span>
+                  </div>
+                )}
+                {selectedCall.phone && (
+                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
+                    <Phone size={16} className="text-muted-foreground" />
+                    <span className="text-sm">{selectedCall.phone}</span>
+                  </div>
+                )}
+                {selectedCall.meetingLink && (
+                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
+                    <Video size={16} className="text-muted-foreground" />
+                    <a href={selectedCall.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                      Join Meeting <ExternalLink size={12} />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Attendees */}
+              {selectedCall.attendees && selectedCall.attendees.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Attendees</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCall.attendees.map((attendee, index) => (
+                      <Badge key={index} variant="secondary">
+                        {attendee}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedCall.notes && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Notes</p>
+                  <p className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-lg">
+                    {selectedCall.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsCallDetailsOpen(false)}>
+              Close
+            </Button>
+            {selectedCall?.meetingLink && (
+              <Button asChild>
+                <a href={selectedCall.meetingLink} target="_blank" rel="noopener noreferrer">
+                  <Video size={16} className="mr-2" />
+                  Join Call
+                </a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Details Sidebar */}
+      <Sheet open={isTaskSidebarOpen} onOpenChange={setIsTaskSidebarOpen}>
+        <SheetContent className="w-[400px] sm:w-[480px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <CheckSquare size={20} className="text-primary" />
+              Task Details
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedTask && (
+            <div className="mt-6 space-y-6">
+              {/* Task Title & Status */}
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-foreground">{selectedTask.title}</h3>
+                  <Badge className={cn(statusColors[selectedTask.status || "not_started"])}>
+                    {selectedTask.status?.replace("_", " ") || "Not Started"}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Priority & Due Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-secondary/50">
+                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
+                  <Badge variant="outline" className={priorityColors[selectedTask.priority]}>
+                    {selectedTask.priority}
+                  </Badge>
+                </div>
+                <div className="p-3 rounded-lg bg-secondary/50">
+                  <p className="text-xs text-muted-foreground mb-1">Due Date</p>
+                  <p className="font-medium">{selectedTask.dueDate}</p>
+                </div>
+              </div>
+
+              {/* Description */}
+              {selectedTask.description && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Description</p>
+                  <p className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-lg">
+                    {selectedTask.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Related Client */}
+              {selectedTask.relatedClient && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Related Client</p>
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {getInitials(selectedTask.relatedClient)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{selectedTask.relatedClient}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Assignee */}
+              {selectedTask.assignee && (
+                <div>
+                  <p className="text-sm font-medium mb-2">Assigned To</p>
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {getInitials(selectedTask.assignee)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{selectedTask.assignee}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Change */}
+              <div>
+                <p className="text-sm font-medium mb-2">Change Status</p>
+                <Select 
+                  value={selectedTask.status || "not_started"} 
+                  onValueChange={(value) => handleTaskStatusChange(selectedTask.id, value as Task["status"])}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="not_started">Not Started</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-4 border-t border-border">
+                <Button variant="outline" className="flex-1" onClick={() => navigate("/tasks")}>
+                  View All Tasks
+                </Button>
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    handleTaskStatusChange(selectedTask.id, "completed");
+                    setIsTaskSidebarOpen(false);
+                  }}
+                  disabled={selectedTask.status === "completed"}
+                >
+                  <CheckSquare size={16} className="mr-2" />
+                  Mark Complete
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
