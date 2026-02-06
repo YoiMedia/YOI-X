@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, FileText, Send, Eye } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const availableServices = [
   { id: "web-design", name: "Website Design", basePrice: 5000 },
@@ -21,10 +22,13 @@ const availableServices = [
 ];
 
 export default function CreateProposal() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [customPrice, setCustomPrice] = useState("");
   const [timeline, setTimeline] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const toggleService = (serviceId: string) => {
     setSelectedServices((prev) =>
@@ -39,9 +43,27 @@ export default function CreateProposal() {
     return sum + (service?.basePrice || 0);
   }, 0);
 
+  const handleGeneratePreview = () => {
+    setShowPreview(true);
+    toast({
+      title: "Preview generated",
+      description: "PDF preview has been generated successfully",
+    });
+  };
+
+  const handleSendToClient = () => {
+    toast({
+      title: "Proposal sent to client",
+      description: "The proposal has been sent for signature",
+    });
+    setTimeout(() => {
+      navigate("/proposals");
+    }, 1500);
+  };
+
   return (
     <AppLayout title="Create Proposal">
-      <div className="max-w-4xl space-y-6">
+      <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Link to="/proposals">
             <Button variant="ghost" size="icon">
@@ -55,6 +77,7 @@ export default function CreateProposal() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Side - Form */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border">
               <CardHeader className="pb-3">
@@ -124,6 +147,7 @@ export default function CreateProposal() {
             </Card>
           </div>
 
+          {/* Right Side - Preview Panel */}
           <div className="space-y-6">
             <Card className="border-border">
               <CardHeader className="pb-3">
@@ -162,12 +186,65 @@ export default function CreateProposal() {
               </CardContent>
             </Card>
 
+            {/* PDF Preview Panel */}
+            <Card className="border-border">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <FileText size={16} />
+                  PDF Preview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {showPreview ? (
+                  <div className="aspect-[8.5/11] bg-white border rounded-lg p-4 text-xs space-y-3">
+                    <div className="text-center border-b pb-2">
+                      <h3 className="font-bold text-sm text-gray-800">PROPOSAL</h3>
+                      <p className="text-gray-500">Business Services Agreement</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="font-semibold text-gray-700">Selected Services:</p>
+                      {selectedServices.map((id) => {
+                        const service = availableServices.find((s) => s.id === id);
+                        return (
+                          <div key={id} className="flex justify-between text-gray-600">
+                            <span>• {service?.name}</span>
+                            <span>${service?.basePrice.toLocaleString()}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {description && (
+                      <div className="space-y-1">
+                        <p className="font-semibold text-gray-700">Description:</p>
+                        <p className="text-gray-600 text-[10px]">{description.slice(0, 150)}...</p>
+                      </div>
+                    )}
+                    <div className="border-t pt-2 mt-auto">
+                      <div className="flex justify-between font-bold text-gray-800">
+                        <span>Total:</span>
+                        <span>${customPrice ? parseInt(customPrice).toLocaleString() : totalPrice.toLocaleString()}</span>
+                      </div>
+                      {timeline && <p className="text-gray-500">Timeline: {timeline}</p>}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="aspect-[8.5/11] bg-secondary/30 border border-dashed rounded-lg flex items-center justify-center">
+                    <div className="text-center text-muted-foreground">
+                      <FileText size={32} className="mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Click "Generate Preview"</p>
+                      <p className="text-xs">to see PDF preview</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="space-y-3">
-              <Button className="w-full" variant="outline">
+              <Button className="w-full" variant="outline" onClick={handleGeneratePreview}>
                 <Eye size={16} className="mr-2" />
-                Generate Proposal (PDF Preview)
+                Generate Preview
               </Button>
-              <Button className="w-full">
+              <Button className="w-full" onClick={handleSendToClient} disabled={selectedServices.length === 0}>
                 <Send size={16} className="mr-2" />
                 Send to Client for Signature
               </Button>
