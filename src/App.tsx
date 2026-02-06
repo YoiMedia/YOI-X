@@ -22,6 +22,8 @@ import RequirementsTimeline from "./pages/RequirementsTimeline";
 import AdminApproval from "./pages/AdminApproval";
 import TaskSubtask from "./pages/TaskSubtask";
 import ClientReview from "./pages/ClientReview";
+import TaskAssignment from "./pages/TaskAssignment";
+import ApprovalsQueue from "./pages/ApprovalsQueue";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,10 +43,13 @@ const App = () => {
             <Route path="/deals" element={<Deals />} />
             <Route path="/proposals" element={<Proposals />} />
             <Route path="/proposals/create" element={<CreateProposal />} />
+            <Route path="/create-proposal" element={<CreateProposal />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/contracts/send" element={<SendDocuments />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/manage" element={<TaskSubtask />} />
+            <Route path="/task-assignment" element={<TaskAssignment />} />
+            <Route path="/approvals-queue" element={<ApprovalsQueue />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/calendar/onboarding" element={<OnboardingCall />} />
             <Route path="/employees" element={<Employees />} />

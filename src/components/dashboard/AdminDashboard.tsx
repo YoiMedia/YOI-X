@@ -1,9 +1,16 @@
-import { Users, FolderKanban, Clock, UserCheck, AlertTriangle, Plus, ListTodo, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Users, FolderKanban, Clock, UserCheck, AlertTriangle, Plus, ListTodo, CheckCircle, UserPlus } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 const activities = [
   { id: 1, user: "Sarah Chen", initials: "SC", action: "sent proposal to", target: "TechStart Inc", time: "10 min ago" },
@@ -20,6 +27,31 @@ const employees = [
 ];
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Create Sales Account Modal State
+  const [isCreateSalesOpen, setIsCreateSalesOpen] = useState(false);
+  const [salesForm, setSalesForm] = useState({
+    name: "",
+    email: "",
+    role: "sales",
+  });
+
+  const handleCreateSalesAccount = () => {
+    setIsCreateSalesOpen(false);
+    toast({
+      title: "Sales account created",
+      description: `Account for ${salesForm.name} has been created successfully`,
+    });
+    setSalesForm({ name: "", email: "", role: "sales" });
+  };
+
+  const handleCancelCreate = () => {
+    setIsCreateSalesOpen(false);
+    setSalesForm({ name: "", email: "", role: "sales" });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -28,15 +60,15 @@ export function AdminDashboard() {
           <p className="text-muted-foreground">Manage your organization</p>
         </div>
         <div className="flex gap-2">
-          <Button>
+          <Button onClick={() => setIsCreateSalesOpen(true)}>
             <Plus size={16} className="mr-2" />
             Create Sales Account
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => navigate("/task-assignment")}>
             <ListTodo size={16} className="mr-2" />
             Assign Tasks
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => navigate("/approvals-queue")}>
             <CheckCircle size={16} className="mr-2" />
             Approve Timelines
           </Button>
@@ -50,6 +82,7 @@ export function AdminDashboard() {
           change="+12 this month"
           changeType="positive"
           icon={Users}
+          onClick={() => navigate("/clients")}
         />
         <StatsCard
           title="Active Projects"
@@ -64,6 +97,7 @@ export function AdminDashboard() {
           change="3 urgent"
           changeType="negative"
           icon={Clock}
+          onClick={() => navigate("/approvals-queue")}
         />
         <StatsCard
           title="Active Employees"
@@ -71,6 +105,7 @@ export function AdminDashboard() {
           change="2 on leave"
           changeType="neutral"
           icon={UserCheck}
+          onClick={() => navigate("/employees")}
         />
         <StatsCard
           title="Tasks at Risk"
@@ -78,6 +113,7 @@ export function AdminDashboard() {
           change="3 overdue, 2 blocked"
           changeType="negative"
           icon={AlertTriangle}
+          onClick={() => navigate("/tasks?filter=at-risk")}
         />
       </div>
 
@@ -139,6 +175,64 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Sales Account Modal */}
+      <Dialog open={isCreateSalesOpen} onOpenChange={setIsCreateSalesOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus size={20} className="text-primary" />
+              Create Sales User
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="sales-name">Name *</Label>
+              <Input
+                id="sales-name"
+                placeholder="Enter full name"
+                value={salesForm.name}
+                onChange={(e) => setSalesForm({ ...salesForm, name: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sales-email">Email *</Label>
+              <Input
+                id="sales-email"
+                type="email"
+                placeholder="name@company.com"
+                value={salesForm.email}
+                onChange={(e) => setSalesForm({ ...salesForm, email: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="sales-role">Role</Label>
+              <Select value={salesForm.role} onValueChange={(value) => setSalesForm({ ...salesForm, role: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sales">Sales</SelectItem>
+                  <SelectItem value="sales-manager">Sales Manager</SelectItem>
+                  <SelectItem value="account-executive">Account Executive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleCancelCreate}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateSalesAccount} disabled={!salesForm.name || !salesForm.email}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
