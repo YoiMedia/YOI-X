@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { CheckSquare, Clock, AlertOctagon, PlayCircle, CheckCircle, MessageSquare, Plus, Upload, X } from "lucide-react";
+import { CheckSquare, Clock, AlertOctagon, PlayCircle, CheckCircle, MessageSquare, Plus, Upload, Download, FileText } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -18,12 +19,14 @@ import { useToast } from "@/hooks/use-toast";
 interface Task {
   id: number;
   title: string;
+  description: string;
   progress: number;
   completed: boolean;
   status: "not_started" | "in_progress" | "under_review" | "blocked" | "completed";
   subtasks: Subtask[];
   deliverables: string[];
   blockedReason?: string;
+  comments: Comment[];
 }
 
 interface Subtask {
@@ -34,12 +37,76 @@ interface Subtask {
   completed: boolean;
 }
 
+interface Comment {
+  id: number;
+  user: string;
+  initials: string;
+  text: string;
+  time: string;
+}
+
 const initialTasks: Task[] = [
-  { id: 1, title: "Complete client onboarding documentation", progress: 75, completed: false, status: "in_progress", subtasks: [], deliverables: [] },
-  { id: 2, title: "Review Q4 marketing materials", progress: 30, completed: false, status: "in_progress", subtasks: [], deliverables: [] },
-  { id: 3, title: "Update project timeline for TechCorp", progress: 50, completed: false, status: "under_review", subtasks: [], deliverables: [] },
-  { id: 4, title: "Prepare weekly status report", progress: 0, completed: false, status: "not_started", subtasks: [], deliverables: [] },
-  { id: 5, title: "Send meeting notes to team", progress: 100, completed: true, status: "completed", subtasks: [], deliverables: [] },
+  { 
+    id: 1, 
+    title: "Complete client onboarding documentation", 
+    description: "Create comprehensive onboarding documentation for new clients including welcome guides, FAQ sections, and video tutorials.",
+    progress: 75, 
+    completed: false, 
+    status: "in_progress", 
+    subtasks: [], 
+    deliverables: [],
+    comments: [
+      { id: 1, user: "Sarah Chen", initials: "SC", text: "Looking good! Can we add more screenshots?", time: "2 hours ago" }
+    ]
+  },
+  { 
+    id: 2, 
+    title: "Review Q4 marketing materials", 
+    description: "Review all marketing materials prepared for Q4 campaigns including social media posts, email templates, and banner ads.",
+    progress: 30, 
+    completed: false, 
+    status: "in_progress", 
+    subtasks: [], 
+    deliverables: [],
+    comments: []
+  },
+  { 
+    id: 3, 
+    title: "Update project timeline for TechCorp", 
+    description: "Revise the project timeline based on the latest client feedback and update all stakeholders.",
+    progress: 50, 
+    completed: false, 
+    status: "under_review", 
+    subtasks: [], 
+    deliverables: [],
+    comments: [
+      { id: 1, user: "Mike Johnson", initials: "MJ", text: "Please adjust the Q2 milestones", time: "1 hour ago" }
+    ]
+  },
+  { 
+    id: 4, 
+    title: "Prepare weekly status report", 
+    description: "Compile the weekly status report summarizing project progress, blockers, and next steps for all active projects.",
+    progress: 0, 
+    completed: false, 
+    status: "not_started", 
+    subtasks: [], 
+    deliverables: [],
+    comments: []
+  },
+  { 
+    id: 5, 
+    title: "Send meeting notes to team", 
+    description: "Distribute the meeting notes from the last client call to all team members and stakeholders.",
+    progress: 100, 
+    completed: true, 
+    status: "completed", 
+    subtasks: [], 
+    deliverables: ["meeting_notes_feb5.pdf"],
+    comments: [
+      { id: 1, user: "Emily Davis", initials: "ED", text: "Thanks for the quick turnaround!", time: "Yesterday" }
+    ]
+  },
 ];
 
 const clientFeedback = [
@@ -52,7 +119,7 @@ const clientFeedback = [
 const statusOptions = [
   { value: "not_started", label: "Not Started", color: "bg-gray-100 text-gray-700 border-gray-200" },
   { value: "in_progress", label: "In Progress", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "under_review", label: "Under Review", color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "under_review", label: "Under Review", color: "bg-orange-100 text-orange-700 border-orange-200" },
   { value: "blocked", label: "Blocked", color: "bg-red-100 text-red-700 border-red-200" },
   { value: "completed", label: "Completed", color: "bg-green-100 text-green-700 border-green-200" },
 ];
@@ -83,7 +150,13 @@ export function EmployeeDashboard() {
   const [uploadTaskId, setUploadTaskId] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const openAddSubtask = (taskId: number) => {
+  // Task Detail Sidebar State
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+
+  const openAddSubtask = (taskId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedTaskId(taskId);
     setIsAddSubtaskOpen(true);
   };
@@ -114,21 +187,27 @@ export function EmployeeDashboard() {
     }
   };
 
-  const handleStatusChange = (taskId: number, newStatus: string) => {
+  const handleStatusChange = (taskId: number, newStatus: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
-        return {
+        const updatedTask = {
           ...task,
           status: newStatus as Task["status"],
           completed: newStatus === "completed",
           progress: newStatus === "completed" ? 100 : task.progress,
         };
+        // Update sidebar if open
+        if (selectedTask?.id === taskId) {
+          setSelectedTask(updatedTask);
+        }
+        return updatedTask;
       }
       return task;
     }));
   };
 
-  const handleBlockedReason = (taskId: number, reason: string) => {
+  const handleBlockedReason = (taskId: number, reason: string, e?: React.ChangeEvent<HTMLTextAreaElement>) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId) {
         return { ...task, blockedReason: reason };
@@ -137,12 +216,16 @@ export function EmployeeDashboard() {
     }));
   };
 
-  const handleFileUpload = (taskId: number, files: FileList | null) => {
+  const handleFileUpload = (taskId: number, files: FileList | null, e?: React.MouseEvent) => {
     if (files && files.length > 0) {
       const fileName = files[0].name;
       setTasks(prev => prev.map(task => {
         if (task.id === taskId) {
-          return { ...task, deliverables: [...task.deliverables, fileName] };
+          const updatedTask = { ...task, deliverables: [...task.deliverables, fileName] };
+          if (selectedTask?.id === taskId) {
+            setSelectedTask(updatedTask);
+          }
+          return updatedTask;
         }
         return task;
       }));
@@ -156,12 +239,73 @@ export function EmployeeDashboard() {
 
   const handleDrop = (e: React.DragEvent, taskId: number) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
     handleFileUpload(taskId, e.dataTransfer.files);
   };
 
+  const handleTaskClick = (task: Task) => {
+    setSelectedTask(task);
+    setIsTaskSidebarOpen(true);
+  };
+
+  const handleAddComment = () => {
+    if (selectedTask && newComment.trim()) {
+      const comment: Comment = {
+        id: Date.now(),
+        user: "You",
+        initials: "YO",
+        text: newComment,
+        time: "Just now"
+      };
+      
+      setTasks(prev => prev.map(task => {
+        if (task.id === selectedTask.id) {
+          const updatedTask = { ...task, comments: [...task.comments, comment] };
+          setSelectedTask(updatedTask);
+          return updatedTask;
+        }
+        return task;
+      }));
+      
+      setNewComment("");
+      toast({
+        title: "Comment added",
+        description: "Your comment has been posted",
+      });
+    }
+  };
+
+  const handleSubtaskToggle = (taskId: number, subtaskId: number) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id === taskId) {
+        const updatedTask = {
+          ...task,
+          subtasks: task.subtasks.map(st => 
+            st.id === subtaskId ? { ...st, completed: !st.completed } : st
+          )
+        };
+        if (selectedTask?.id === taskId) {
+          setSelectedTask(updatedTask);
+        }
+        return updatedTask;
+      }
+      return task;
+    }));
+  };
+
   const getStatusColor = (status: string) => {
     return statusOptions.find(s => s.value === status)?.color || "";
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed": return <CheckCircle size={14} className="text-green-600" />;
+      case "blocked": return <AlertOctagon size={14} className="text-red-600" />;
+      case "in_progress": return <PlayCircle size={14} className="text-blue-600" />;
+      case "under_review": return <Clock size={14} className="text-orange-600" />;
+      default: return null;
+    }
   };
 
   return (
@@ -220,18 +364,20 @@ export function EmployeeDashboard() {
             {tasks.map((task) => (
               <div
                 key={task.id}
+                onClick={() => handleTaskClick(task)}
                 className={cn(
-                  "p-3 rounded-lg border transition-colors",
-                  task.status === "blocked" ? "border-red-200 bg-red-50/50" :
-                  task.status === "completed" ? "border-green-200 bg-green-50/50" :
-                  task.status === "under_review" ? "border-purple-200 bg-purple-50/50" :
-                  "border-border bg-secondary/50"
+                  "p-3 rounded-lg border transition-colors cursor-pointer",
+                  task.status === "blocked" ? "border-red-200 bg-red-50/50 hover:bg-red-50" :
+                  task.status === "completed" ? "border-green-200 bg-green-50/50 hover:bg-green-50" :
+                  task.status === "under_review" ? "border-orange-200 bg-orange-50/50 hover:bg-orange-50" :
+                  "border-border bg-secondary/50 hover:bg-secondary"
                 )}
               >
                 <div className="flex items-start gap-3">
                   <Checkbox 
                     checked={task.completed} 
                     className="mt-0.5"
+                    onClick={(e) => e.stopPropagation()}
                     onCheckedChange={(checked) => {
                       if (checked) handleStatusChange(task.id, "completed");
                       else handleStatusChange(task.id, "not_started");
@@ -239,19 +385,25 @@ export function EmployeeDashboard() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                      <p
-                        className={cn(
-                          "text-sm font-medium",
-                          task.completed ? "line-through text-muted-foreground" : "text-foreground"
-                        )}
-                      >
-                        {task.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(task.status)}
+                        <p
+                          className={cn(
+                            "text-sm font-medium",
+                            task.completed ? "line-through text-muted-foreground" : "text-foreground"
+                          )}
+                        >
+                          {task.title}
+                        </p>
+                      </div>
                       <Select
                         value={task.status}
                         onValueChange={(value) => handleStatusChange(task.id, value)}
                       >
-                        <SelectTrigger className={cn("h-7 w-auto text-xs px-2", getStatusColor(task.status))}>
+                        <SelectTrigger 
+                          className={cn("h-7 w-auto text-xs px-2", getStatusColor(task.status))}
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -274,7 +426,7 @@ export function EmployeeDashboard() {
 
                     {/* Blocked Comment Box */}
                     {task.status === "blocked" && (
-                      <div className="mt-2">
+                      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                         <Textarea
                           placeholder="Describe the blocker..."
                           value={task.blockedReason || ""}
@@ -286,10 +438,14 @@ export function EmployeeDashboard() {
 
                     {/* Subtasks */}
                     {task.subtasks.length > 0 && (
-                      <div className="mt-2 pl-2 border-l-2 border-primary/20 space-y-1">
+                      <div className="mt-2 pl-2 border-l-2 border-primary/20 space-y-1" onClick={(e) => e.stopPropagation()}>
                         {task.subtasks.map(subtask => (
                           <div key={subtask.id} className="flex items-center gap-2 text-xs">
-                            <Checkbox checked={subtask.completed} className="h-3 w-3" />
+                            <Checkbox 
+                              checked={subtask.completed} 
+                              className="h-3 w-3" 
+                              onCheckedChange={() => handleSubtaskToggle(task.id, subtask.id)}
+                            />
                             <span className={subtask.completed ? "line-through text-muted-foreground" : ""}>
                               {subtask.title}
                             </span>
@@ -303,10 +459,11 @@ export function EmployeeDashboard() {
 
                     {/* Deliverables */}
                     {task.deliverables.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-1">
+                      <div className="mt-2 flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
                         {task.deliverables.map((file, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            📎 {file}
+                          <Badge key={index} variant="secondary" className="text-xs cursor-pointer hover:bg-secondary">
+                            <Download size={10} className="mr-1" />
+                            {file}
                           </Badge>
                         ))}
                       </div>
@@ -319,6 +476,7 @@ export function EmployeeDashboard() {
                           "mt-2 border-2 border-dashed rounded-lg p-4 text-center transition-colors",
                           isDragging ? "border-primary bg-primary/5" : "border-border"
                         )}
+                        onClick={(e) => e.stopPropagation()}
                         onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                         onDragLeave={() => setIsDragging(false)}
                         onDrop={(e) => handleDrop(e, task.id)}
@@ -349,7 +507,7 @@ export function EmployeeDashboard() {
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs"
-                        onClick={() => openAddSubtask(task.id)}
+                        onClick={(e) => openAddSubtask(task.id, e)}
                       >
                         <Plus size={12} className="mr-1" />
                         Add Subtask
@@ -358,7 +516,10 @@ export function EmployeeDashboard() {
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs"
-                        onClick={() => setUploadTaskId(uploadTaskId === task.id ? null : task.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setUploadTaskId(uploadTaskId === task.id ? null : task.id);
+                        }}
                       >
                         <Upload size={12} className="mr-1" />
                         Upload Deliverable
@@ -462,6 +623,161 @@ export function EmployeeDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Task Detail Sidebar */}
+      <Sheet open={isTaskSidebarOpen} onOpenChange={setIsTaskSidebarOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FileText size={20} className="text-primary" />
+              Task Details
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedTask && (
+            <div className="mt-6 space-y-6">
+              {/* Task Title & Status */}
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-foreground">{selectedTask.title}</h3>
+                  <Badge className={cn("whitespace-nowrap", getStatusColor(selectedTask.status))}>
+                    {statusOptions.find(s => s.value === selectedTask.status)?.label}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{selectedTask.description}</p>
+              </div>
+
+              {/* Progress */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Progress</p>
+                  <p className="text-sm text-muted-foreground">{selectedTask.progress}%</p>
+                </div>
+                <Progress value={selectedTask.progress} className="h-3" />
+              </div>
+
+              {/* Subtasks */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium">Subtasks ({selectedTask.subtasks.length})</p>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setSelectedTaskId(selectedTask.id);
+                      setIsAddSubtaskOpen(true);
+                    }}
+                  >
+                    <Plus size={12} className="mr-1" />
+                    Add
+                  </Button>
+                </div>
+                {selectedTask.subtasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No subtasks yet</p>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedTask.subtasks.map(subtask => (
+                      <div 
+                        key={subtask.id}
+                        className="flex items-center justify-between p-2 rounded-lg border border-border bg-background"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Checkbox 
+                            checked={subtask.completed}
+                            onCheckedChange={() => handleSubtaskToggle(selectedTask.id, subtask.id)}
+                          />
+                          <span className={cn(
+                            "text-sm",
+                            subtask.completed && "line-through text-muted-foreground"
+                          )}>
+                            {subtask.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {subtask.dueDate && (
+                            <span className="text-xs text-muted-foreground">{subtask.dueDate}</span>
+                          )}
+                          <Badge className={cn("text-xs", priorityColors[subtask.priority])}>
+                            {subtask.priority}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Deliverables */}
+              <div>
+                <p className="text-sm font-medium mb-3">Deliverables ({selectedTask.deliverables.length})</p>
+                {selectedTask.deliverables.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No deliverables uploaded</p>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedTask.deliverables.map((file, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between p-2 rounded-lg border border-border bg-background"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText size={16} className="text-muted-foreground" />
+                          <span className="text-sm">{file}</span>
+                        </div>
+                        <Button size="sm" variant="ghost" className="h-7">
+                          <Download size={14} />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Comments Section */}
+              <div>
+                <p className="text-sm font-medium mb-3">Comments ({selectedTask.comments.length})</p>
+                
+                {/* Add Comment */}
+                <div className="flex gap-2 mb-4">
+                  <Input 
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+                  />
+                  <Button onClick={handleAddComment} disabled={!newComment.trim()}>
+                    Post
+                  </Button>
+                </div>
+
+                {/* Comments List */}
+                {selectedTask.comments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No comments yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedTask.comments.map(comment => (
+                      <div key={comment.id} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            {comment.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium">{comment.user}</p>
+                            <span className="text-xs text-muted-foreground">{comment.time}</span>
+                          </div>
+                          <p className="text-sm text-foreground mt-1">{comment.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
