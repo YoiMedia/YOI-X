@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, FolderKanban, Clock, UserCheck, AlertTriangle, Plus, ListTodo, CheckCircle, UserPlus } from "lucide-react";
+import { Users, FolderKanban, Clock, UserCheck, AlertTriangle, Plus, ListTodo, CheckCircle, UserPlus, X } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,22 +9,132 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 const activities = [
-  { id: 1, user: "Sarah Chen", initials: "SC", action: "sent proposal to", target: "TechStart Inc", time: "10 min ago" },
-  { id: 2, user: "Mike Johnson", initials: "MJ", action: "closed deal with", target: "Acme Corp", time: "1 hour ago" },
-  { id: 3, user: "Emily Davis", initials: "ED", action: "completed task", target: "Client onboarding", time: "2 hours ago" },
-  { id: 4, user: "Alex Rivera", initials: "AR", action: "approved timeline for", target: "Website Redesign", time: "3 hours ago" },
+  { 
+    id: 1, 
+    user: "Sarah Chen", 
+    initials: "SC", 
+    action: "sent proposal to", 
+    target: "TechStart Inc", 
+    time: "10 min ago",
+    details: {
+      type: "Proposal",
+      project: "Website Redesign",
+      value: "$15,000",
+      status: "Pending Review"
+    }
+  },
+  { 
+    id: 2, 
+    user: "Mike Johnson", 
+    initials: "MJ", 
+    action: "closed deal with", 
+    target: "Acme Corp", 
+    time: "1 hour ago",
+    details: {
+      type: "Deal",
+      project: "Marketing Campaign",
+      value: "$42,000",
+      status: "Completed"
+    }
+  },
+  { 
+    id: 3, 
+    user: "Emily Davis", 
+    initials: "ED", 
+    action: "completed task", 
+    target: "Client onboarding", 
+    time: "2 hours ago",
+    details: {
+      type: "Task",
+      project: "TechStart Inc Onboarding",
+      value: "N/A",
+      status: "Completed"
+    }
+  },
+  { 
+    id: 4, 
+    user: "Alex Rivera", 
+    initials: "AR", 
+    action: "approved timeline for", 
+    target: "Website Redesign", 
+    time: "3 hours ago",
+    details: {
+      type: "Timeline Approval",
+      project: "Acme Corp Website",
+      value: "$28,000",
+      status: "Approved"
+    }
+  },
 ];
 
 const employees = [
-  { name: "Sarah Chen", tasks: 8, capacity: 10 },
-  { name: "Mike Johnson", tasks: 6, capacity: 10 },
-  { name: "Emily Davis", tasks: 9, capacity: 10 },
-  { name: "Alex Rivera", tasks: 4, capacity: 10 },
+  { 
+    id: "1",
+    name: "Sarah Chen", 
+    tasks: 8, 
+    capacity: 10,
+    activeTasks: 5,
+    blockedTasks: 1,
+    taskList: [
+      { title: "Website redesign", status: "In Progress", priority: "High" },
+      { title: "Client meeting prep", status: "In Progress", priority: "Medium" },
+      { title: "Proposal review", status: "Blocked", priority: "High" },
+      { title: "Analytics setup", status: "Not Started", priority: "Low" },
+      { title: "Content review", status: "In Progress", priority: "Medium" },
+    ]
+  },
+  { 
+    id: "2",
+    name: "Mike Johnson", 
+    tasks: 6, 
+    capacity: 10,
+    activeTasks: 4,
+    blockedTasks: 0,
+    taskList: [
+      { title: "Sales presentation", status: "In Progress", priority: "High" },
+      { title: "Contract negotiation", status: "In Progress", priority: "High" },
+      { title: "Lead follow-up", status: "Not Started", priority: "Medium" },
+      { title: "CRM update", status: "In Progress", priority: "Low" },
+    ]
+  },
+  { 
+    id: "3",
+    name: "Emily Davis", 
+    tasks: 9, 
+    capacity: 10,
+    activeTasks: 6,
+    blockedTasks: 2,
+    taskList: [
+      { title: "Onboarding docs", status: "In Progress", priority: "High" },
+      { title: "Training materials", status: "Blocked", priority: "Medium" },
+      { title: "Process documentation", status: "Blocked", priority: "High" },
+      { title: "Client communication", status: "In Progress", priority: "Medium" },
+      { title: "Report generation", status: "In Progress", priority: "Low" },
+      { title: "Data migration", status: "In Progress", priority: "High" },
+    ]
+  },
+  { 
+    id: "4",
+    name: "Alex Rivera", 
+    tasks: 4, 
+    capacity: 10,
+    activeTasks: 3,
+    blockedTasks: 0,
+    taskList: [
+      { title: "Timeline review", status: "In Progress", priority: "High" },
+      { title: "Budget approval", status: "In Progress", priority: "Medium" },
+      { title: "Resource allocation", status: "Not Started", priority: "Low" },
+    ]
+  },
 ];
+
+type Employee = typeof employees[0];
+type Activity = typeof activities[0];
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -35,21 +145,57 @@ export function AdminDashboard() {
   const [salesForm, setSalesForm] = useState({
     name: "",
     email: "",
-    role: "sales",
   });
+
+  // Employee Workload Sidebar State
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isEmployeeSidebarOpen, setIsEmployeeSidebarOpen] = useState(false);
+
+  // Activity Details Modal State
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
 
   const handleCreateSalesAccount = () => {
     setIsCreateSalesOpen(false);
     toast({
-      title: "Sales account created",
-      description: `Account for ${salesForm.name} has been created successfully`,
+      title: "Sales account created successfully",
+      description: `Account for ${salesForm.name} has been created`,
     });
-    setSalesForm({ name: "", email: "", role: "sales" });
+    setSalesForm({ name: "", email: "" });
   };
 
   const handleCancelCreate = () => {
     setIsCreateSalesOpen(false);
-    setSalesForm({ name: "", email: "", role: "sales" });
+    setSalesForm({ name: "", email: "" });
+  };
+
+  const handleEmployeeClick = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsEmployeeSidebarOpen(true);
+  };
+
+  const handleActivityClick = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setIsActivityModalOpen(true);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "High": return "bg-red-100 text-red-700 border-red-200";
+      case "Medium": return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      case "Low": return "bg-green-100 text-green-700 border-green-200";
+      default: return "bg-secondary text-secondary-foreground";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "In Progress": return "bg-blue-100 text-blue-700";
+      case "Blocked": return "bg-red-100 text-red-700";
+      case "Not Started": return "bg-muted text-muted-foreground";
+      case "Completed": return "bg-green-100 text-green-700";
+      default: return "bg-secondary text-secondary-foreground";
+    }
   };
 
   return (
@@ -126,7 +272,8 @@ export function AdminDashboard() {
             {employees.map((employee) => (
               <div
                 key={employee.name}
-                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                onClick={() => handleEmployeeClick(employee)}
+                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -155,7 +302,8 @@ export function AdminDashboard() {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
+                onClick={() => handleActivityClick(activity)}
+                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-primary/10 text-primary text-xs">
@@ -182,7 +330,7 @@ export function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus size={20} className="text-primary" />
-              Create Sales User
+              Create Sales Account
             </DialogTitle>
           </DialogHeader>
           
@@ -210,16 +358,12 @@ export function AdminDashboard() {
 
             <div className="space-y-2">
               <Label htmlFor="sales-role">Role</Label>
-              <Select value={salesForm.role} onValueChange={(value) => setSalesForm({ ...salesForm, role: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sales">Sales</SelectItem>
-                  <SelectItem value="sales-manager">Sales Manager</SelectItem>
-                  <SelectItem value="account-executive">Account Executive</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="sales-role"
+                value="Sales"
+                disabled
+                className="bg-muted"
+              />
             </div>
           </div>
 
@@ -228,7 +372,147 @@ export function AdminDashboard() {
               Cancel
             </Button>
             <Button onClick={handleCreateSalesAccount} disabled={!salesForm.name || !salesForm.email}>
-              Create
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Workload Sidebar */}
+      <Sheet open={isEmployeeSidebarOpen} onOpenChange={setIsEmployeeSidebarOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px]">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {selectedEmployee?.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-lg font-semibold">{selectedEmployee?.name}</p>
+                <p className="text-sm text-muted-foreground font-normal">Employee Workload</p>
+              </div>
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedEmployee && (
+            <div className="mt-6 space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-4 rounded-lg bg-secondary/50 text-center">
+                  <p className="text-2xl font-bold text-foreground">{selectedEmployee.tasks}</p>
+                  <p className="text-xs text-muted-foreground">Total Tasks</p>
+                </div>
+                <div className="p-4 rounded-lg bg-blue-50 text-center">
+                  <p className="text-2xl font-bold text-blue-700">{selectedEmployee.activeTasks}</p>
+                  <p className="text-xs text-blue-600">Active Tasks</p>
+                </div>
+                <div className="p-4 rounded-lg bg-red-50 text-center">
+                  <p className="text-2xl font-bold text-red-700">{selectedEmployee.blockedTasks}</p>
+                  <p className="text-xs text-red-600">Blocked Tasks</p>
+                </div>
+              </div>
+
+              {/* Capacity */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Capacity</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedEmployee.tasks}/{selectedEmployee.capacity} tasks
+                  </p>
+                </div>
+                <Progress 
+                  value={(selectedEmployee.tasks / selectedEmployee.capacity) * 100} 
+                  className="h-3"
+                />
+              </div>
+
+              {/* Task List */}
+              <div>
+                <p className="text-sm font-medium mb-3">Tasks</p>
+                <div className="space-y-2">
+                  {selectedEmployee.taskList.map((task, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-background"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-foreground">{task.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className={getPriorityColor(task.priority)}>
+                            {task.priority}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Badge className={getStatusColor(task.status)}>
+                        {task.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Activity Details Modal */}
+      <Dialog open={isActivityModalOpen} onOpenChange={setIsActivityModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Activity Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedActivity && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {selectedActivity.initials}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">{selectedActivity.user}</p>
+                  <p className="text-sm text-muted-foreground">{selectedActivity.time}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <Badge variant="outline">{selectedActivity.details.type}</Badge>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Project</span>
+                  <span className="text-sm font-medium">{selectedActivity.details.project}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Value</span>
+                  <span className="text-sm font-medium">{selectedActivity.details.value}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <Badge className={
+                    selectedActivity.details.status === "Completed" ? "bg-green-100 text-green-700" :
+                    selectedActivity.details.status === "Approved" ? "bg-blue-100 text-blue-700" :
+                    "bg-yellow-100 text-yellow-700"
+                  }>
+                    {selectedActivity.details.status}
+                  </Badge>
+                </div>
+              </div>
+
+              <p className="text-sm text-foreground pt-2">
+                <span className="font-medium">{selectedActivity.user}</span>{" "}
+                <span className="text-muted-foreground">{selectedActivity.action}</span>{" "}
+                <span className="font-medium">{selectedActivity.target}</span>
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsActivityModalOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
