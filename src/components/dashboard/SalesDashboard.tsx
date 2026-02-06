@@ -78,6 +78,14 @@ export function SalesDashboard() {
   // Upcoming Calls State (for adding new calls visually)
   const [upcomingCalls, setUpcomingCalls] = useState(initialUpcomingCalls);
 
+  // Scroll to upcoming calls panel
+  const scrollToUpcomingCalls = () => {
+    const element = document.getElementById("upcoming-calls-panel");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const resetClientForm = () => {
     setClientForm({
       clientName: "",
@@ -176,6 +184,7 @@ export function SalesDashboard() {
           change="$285K pipeline"
           changeType="positive"
           icon={Handshake}
+          onClick={() => navigate("/deals")}
         />
         <StatsCard
           title="Pending Proposals"
@@ -183,6 +192,7 @@ export function SalesDashboard() {
           change="2 awaiting response"
           changeType="neutral"
           icon={FileText}
+          onClick={() => navigate("/proposals?filter=pending")}
         />
         <StatsCard
           title="Signed Contracts"
@@ -190,6 +200,7 @@ export function SalesDashboard() {
           change="+3 this month"
           changeType="positive"
           icon={FileSignature}
+          onClick={() => navigate("/contracts")}
         />
         <StatsCard
           title="Upcoming Calls"
@@ -197,6 +208,7 @@ export function SalesDashboard() {
           change="2 today"
           changeType="neutral"
           icon={Phone}
+          onClick={scrollToUpcomingCalls}
         />
         <StatsCard
           title="Tasks in Progress"
@@ -204,11 +216,12 @@ export function SalesDashboard() {
           change="2 overdue"
           changeType="negative"
           icon={CheckSquare}
+          onClick={() => navigate("/tasks?role=sales")}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-border">
+        <Card id="upcoming-calls-panel" className="border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Upcoming Calls</CardTitle>
           </CardHeader>
