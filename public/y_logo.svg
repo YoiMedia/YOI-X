@@ -1,0 +1,7 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Orange Y (Base) -->
+  <path d="M50 80H220L256 180L292 80H462L312 432V512H200V432L50 80Z" fill="#F05A28"/>
+  
+  <!-- Black Inner Y (Overlay/Cutout) -->
+  <path d="M140 180H210L256 260L302 180H372L282 380V512H230V380L140 180Z" fill="black"/>
+</svg>

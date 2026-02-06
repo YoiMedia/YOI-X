@@ -23,6 +23,7 @@ import { useRole, UserRole } from "@/contexts/RoleContext";
 const salesNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "Clients", href: "/clients", icon: Users },
+  { title: "Projects", href: "/projects", icon: FolderKanban },
   { title: "Deals", href: "/deals", icon: Handshake },
   { title: "Proposals", href: "/proposals", icon: FileText },
   { title: "Contracts", href: "/contracts", icon: FileSignature },
@@ -35,9 +36,10 @@ const salesNavItems = [
 const adminNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "Clients", href: "/clients", icon: Users },
+  { title: "Projects", href: "/projects", icon: FolderKanban },
   { title: "Employees", href: "/employees", icon: UserCog },
   { title: "Tasks", href: "/tasks", icon: CheckSquare },
-  { title: "Approvals", href: "/admin/approvals", icon: ClipboardCheck },
+  { title: "Approvals", href: "/approvals-queue", icon: ClipboardCheck },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -65,7 +67,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { currentRole } = useRole();
-  
+
   const navItems = navItemsByRole[currentRole];
 
   return (
@@ -77,9 +79,12 @@ export function Sidebar() {
     >
       <div className="flex items-center h-16 px-4 border-b border-sidebar-border">
         {!collapsed && (
-          <span className="text-lg font-semibold text-foreground tracking-tight">
-            Enterprise
-          </span>
+          <div className="flex items-center gap-2">
+            <img src="/y_logo.svg" alt="YOI MEDIA" className="h-8 w-8" />
+            <span className="text-lg font-bold text-foreground tracking-tight">
+              YOI MEDIA
+            </span>
+          </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -116,7 +121,7 @@ export function Sidebar() {
       <div className="p-4 border-t border-sidebar-border">
         {!collapsed && (
           <div className="text-xs text-sidebar-foreground">
-            © 2025 Enterprise Inc.
+            © 2026 YOI MEDIA Inc.
           </div>
         )}
       </div>

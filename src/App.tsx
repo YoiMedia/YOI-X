@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { DataProvider as GlobalDataProvider } from "@/contexts/DataContext";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
+import Projects from "./pages/Projects";
 import Deals from "./pages/Deals";
 import Proposals from "./pages/Proposals";
 import Contracts from "./pages/Contracts";
@@ -30,40 +32,43 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <RoleProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/clients/add" element={<AddClient />} />
-            <Route path="/deals" element={<Deals />} />
-            <Route path="/proposals" element={<Proposals />} />
-            <Route path="/proposals/create" element={<CreateProposal />} />
-            <Route path="/create-proposal" element={<CreateProposal />} />
-            <Route path="/contracts" element={<Contracts />} />
-            <Route path="/contracts/send" element={<SendDocuments />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/tasks/manage" element={<TaskSubtask />} />
-            <Route path="/task-assignment" element={<TaskAssignment />} />
-            <Route path="/approvals-queue" element={<ApprovalsQueue />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/calendar/onboarding" element={<OnboardingCall />} />
-            <Route path="/employees" element={<Employees />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/portal" element={<ClientPortal />} />
-            <Route path="/portal/review" element={<ClientReview />} />
-            <Route path="/projects/requirements" element={<RequirementsTimeline />} />
-            <Route path="/admin/approvals" element={<AdminApproval />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </RoleProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <GlobalDataProvider>
+          <RoleProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/clients" element={<Clients />} />
+                <Route path="/clients/add" element={<AddClient />} />
+                <Route path="/projects" element={<Projects />} />
+                <Route path="/deals" element={<Deals />} />
+                <Route path="/proposals" element={<Proposals />} />
+                <Route path="/proposals/create" element={<CreateProposal />} />
+                <Route path="/create-proposal" element={<CreateProposal />} />
+                <Route path="/contracts" element={<Contracts />} />
+                <Route path="/contracts/send" element={<SendDocuments />} />
+                <Route path="/tasks" element={<Tasks />} />
+                <Route path="/tasks/manage" element={<TaskSubtask />} />
+                <Route path="/task-assignment" element={<TaskAssignment />} />
+                <Route path="/approvals-queue" element={<ApprovalsQueue />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/calendar/onboarding" element={<OnboardingCall />} />
+                <Route path="/employees" element={<Employees />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/portal" element={<ClientPortal />} />
+                <Route path="/portal/review" element={<ClientReview />} />
+                <Route path="/projects/requirements" element={<RequirementsTimeline />} />
+                <Route path="/admin/approvals" element={<AdminApproval />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </RoleProvider>
+        </GlobalDataProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

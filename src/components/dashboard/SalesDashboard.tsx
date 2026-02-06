@@ -1,429 +1,327 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { Handshake, FileText, FileSignature, Phone, CheckSquare, Plus, Calendar as CalendarIcon, Video, Mail, ExternalLink } from "lucide-react";
+import { Users, Phone, FileText, Send, Plus, ArrowRight, UserPlus, Calendar as CalendarIcon, Clock, CheckCircle, AlertCircle, Inbox, MoreHorizontal, DollarSign } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Link, useNavigate } from "react-router-dom";
+import { useData } from "@/contexts/DataContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { AddClientModal } from "@/components/sales/AddClientModal";
-import { ScheduleCallModal, CallScheduleData } from "@/components/sales/ScheduleCallModal";
-import { TaskItemCard, TaskItem } from "@/components/sales/TaskItemCard";
-import { TaskDetailsSidebar } from "@/components/sales/TaskDetailsSidebar";
-
-interface Call {
-  id: number;
-  client: string;
-  contact: string;
-  time: string;
-  date: string;
-  email?: string;
-  phone?: string;
-  meetingLink?: string;
-  notes?: string;
-  attendees?: string[];
-}
-
-const initialUpcomingCalls: Call[] = [
-  { 
-    id: 1, 
-    client: "Acme Corp", 
-    contact: "John Smith", 
-    time: "10:00 AM", 
-    date: "Today",
-    email: "john.smith@acmecorp.com",
-    phone: "+1 (555) 123-4567",
-    meetingLink: "https://meet.google.com/abc-defg-hij",
-    notes: "Discuss Q2 expansion plans and budget allocation for new marketing initiatives.",
-    attendees: ["Sarah Johnson", "Mike Thompson"]
-  },
-  { 
-    id: 2, 
-    client: "TechStart Inc", 
-    contact: "Sarah Lee", 
-    time: "2:30 PM", 
-    date: "Today",
-    email: "sarah.lee@techstart.io",
-    phone: "+1 (555) 234-5678",
-    meetingLink: "https://zoom.us/j/123456789",
-    notes: "Initial discovery call to understand their software needs.",
-    attendees: ["Emily Chen"]
-  },
-  { 
-    id: 3, 
-    client: "Global Partners", 
-    contact: "Mike Chen", 
-    time: "9:00 AM", 
-    date: "Tomorrow",
-    email: "m.chen@globalpartners.com",
-    phone: "+1 (555) 345-6789",
-    notes: "Follow-up on proposal sent last week.",
-    attendees: ["David Wilson", "Lisa Anderson"]
-  },
-  { 
-    id: 4, 
-    client: "Innovation Labs", 
-    contact: "Emily Davis", 
-    time: "11:00 AM", 
-    date: "Tomorrow",
-    email: "emily.d@innovationlabs.com",
-    phone: "+1 (555) 456-7890",
-    notes: "Contract negotiation meeting.",
-    attendees: []
-  },
-];
-
-const initialTasks: TaskItem[] = [
-  { 
-    id: 1, 
-    title: "Follow up with Acme Corp", 
-    priority: "high", 
-    dueDate: "Today",
-    description: "Send follow-up email regarding the proposal and schedule a call to discuss next steps.",
-    status: "in_progress",
-    relatedClient: "Acme Corp",
-    assignee: "Sarah Johnson"
-  },
-  { 
-    id: 2, 
-    title: "Prepare proposal for TechStart", 
-    priority: "high", 
-    dueDate: "Tomorrow",
-    description: "Create a comprehensive proposal including pricing, timeline, and deliverables for the software development project.",
-    status: "in_progress",
-    relatedClient: "TechStart Inc",
-    assignee: "You"
-  },
-  { 
-    id: 3, 
-    title: "Update pricing sheet", 
-    priority: "medium", 
-    dueDate: "Feb 7",
-    description: "Review and update the Q1 pricing sheet with new service offerings and adjusted rates.",
-    status: "not_started",
-    assignee: "You"
-  },
-  { 
-    id: 4, 
-    title: "Send contract to Global Partners", 
-    priority: "medium", 
-    dueDate: "Feb 8",
-    description: "Finalize and send the service agreement contract for signature.",
-    status: "not_started",
-    relatedClient: "Global Partners",
-    assignee: "Mike Thompson"
-  },
-];
+import { cn } from "@/lib/utils";
 
 export function SalesDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  // Modal States
-  const [isAddClientOpen, setIsAddClientOpen] = useState(false);
-  const [isScheduleCallOpen, setIsScheduleCallOpen] = useState(false);
-  
-  // Data States
-  const [upcomingCalls, setUpcomingCalls] = useState<Call[]>(initialUpcomingCalls);
-  const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
+  const { clients, isLoading, addActivity, addClient } = useData();
 
-  // Call Details Panel State
-  const [selectedCall, setSelectedCall] = useState<Call | null>(null);
-  const [isCallDetailsOpen, setIsCallDetailsOpen] = useState(false);
+  const [isAddLeadOpen, setIsAddLeadOpen] = useState(false);
+  const [leadForm, setLeadForm] = useState({ name: "", email: "", contact: "", value: "" });
 
-  // Task Details Sidebar State
-  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
-  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
+  const [isDraftProposalOpen, setIsDraftProposalOpen] = useState(false);
+  const [proposalForm, setProposalForm] = useState({ title: "", client: "", value: "" });
 
-  // Scroll to upcoming calls panel
-  const scrollToUpcomingCalls = () => {
-    const element = document.getElementById("upcoming-calls-panel");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Derived stats
+  const pendingLeads = clients.filter(c => c.status === "pending");
+  const activeDeals = clients.filter(c => c.status === "active");
+  const totalValue = activeDeals.reduce((sum, c) => sum + parseInt(c.value.replace(/[^0-9]/g, "") || "0"), 0);
+
+  const conversionRate = clients.length > 0
+    ? Math.round((activeDeals.length / clients.length) * 100)
+    : 0;
+
+  const handleAddLead = () => {
+    if (!leadForm.name || !leadForm.email) {
+      toast({ title: "Error", description: "Name and email are required", variant: "destructive" });
+      return;
     }
-  };
 
-  const handleScheduleCall = (data: CallScheduleData) => {
-    const newCall: Call = {
-      id: upcomingCalls.length + 1,
-      client: "New Client",
-      contact: "TBD",
-      time: data.timeSlot,
-      date: format(data.date, "MMM d"),
-      notes: data.notes,
-      attendees: [],
-    };
-    setUpcomingCalls([...upcomingCalls, newCall]);
-  };
-
-  const handleCallClick = (call: Call) => {
-    setSelectedCall(call);
-    setIsCallDetailsOpen(true);
-  };
-
-  const handleTaskClick = (task: TaskItem) => {
-    setSelectedTask(task);
-    setIsTaskSidebarOpen(true);
-  };
-
-  const handleTaskStatusChange = (taskId: number, completed: boolean) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id === taskId) {
-        const newStatus = completed ? "completed" : "not_started";
-        const updated = { ...t, status: newStatus as TaskItem["status"] };
-        if (selectedTask?.id === taskId) {
-          setSelectedTask(updated);
-        }
-        return updated;
-      }
-      return t;
-    }));
-    toast({
-      title: "Task updated",
-      description: `Task marked as ${completed ? "completed" : "not started"}`,
+    addClient({
+      name: leadForm.name,
+      email: leadForm.email,
+      contact: leadForm.contact,
+      status: "pending",
+      value: leadForm.value || "$0"
     });
+
+    addActivity({
+      actor_name: "Sales Rep",
+      actor_initials: "SR",
+      action_text: `added new lead: ${leadForm.name}`,
+      timestamp: "Just now"
+    });
+
+    setIsAddLeadOpen(false);
+    toast({ title: "Lead Captured", description: `${leadForm.name} has been added to pending leads.` });
+    setLeadForm({ name: "", email: "", contact: "", value: "" });
   };
 
-  const getInitials = (name: string) => {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase();
+  const handleDraftProposal = () => {
+    if (!proposalForm.title || !proposalForm.client) {
+      toast({ title: "Error", description: "Title and client are required", variant: "destructive" });
+      return;
+    }
+
+    addActivity({
+      actor_name: "Sales Rep",
+      actor_initials: "SR",
+      action_text: `drafted proposal: ${proposalForm.title} for ${proposalForm.client}`,
+      timestamp: "Just now"
+    });
+
+    setIsDraftProposalOpen(false);
+    toast({ title: "Proposal Drafted", description: `A new draft has been saved for ${proposalForm.client}.` });
+    setProposalForm({ title: "", client: "", value: "" });
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">Sales Dashboard</h2>
-          <p className="text-muted-foreground">Track your deals and pipeline</p>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Sales Command Center</h2>
+          <p className="text-muted-foreground">Monitor your pipeline and outreach velocity</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsAddClientOpen(true)}>
-            <Plus size={16} className="mr-2" />
-            Add New Client
+          <Button onClick={() => setIsAddLeadOpen(true)} className="bg-primary hover:bg-primary/90">
+            <UserPlus size={16} className="mr-2" />
+            New Lead
           </Button>
-          <Button variant="outline" onClick={() => navigate("/create-proposal")}>
-            <FileText size={16} className="mr-2" />
-            Create Proposal
-          </Button>
-          <Button variant="outline" onClick={() => setIsScheduleCallOpen(true)}>
-            <CalendarIcon size={16} className="mr-2" />
-            Schedule Call
+          <Button variant="outline" onClick={() => setIsDraftProposalOpen(true)}>
+            <Send size={16} className="mr-2" />
+            Quick Proposal
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards with Click Navigation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatsCard
-          title="My Deals"
-          value="12"
-          change="$285K pipeline"
-          changeType="positive"
-          icon={Handshake}
-          onClick={() => navigate("/deals")}
-        />
-        <StatsCard
-          title="Pending Proposals"
-          value="5"
-          change="2 awaiting response"
-          changeType="neutral"
-          icon={FileText}
-          onClick={() => navigate("/proposals?filter=pending")}
-        />
-        <StatsCard
-          title="Signed Contracts"
-          value="8"
-          change="+3 this month"
-          changeType="positive"
-          icon={FileSignature}
-          onClick={() => navigate("/contracts")}
-        />
-        <StatsCard
-          title="Upcoming Calls"
-          value={String(upcomingCalls.length)}
-          change="2 today"
-          changeType="neutral"
-          icon={Phone}
-          onClick={scrollToUpcomingCalls}
-        />
-        <StatsCard
-          title="Tasks in Progress"
-          value="6"
-          change="2 overdue"
-          changeType="negative"
-          icon={CheckSquare}
-          onClick={() => navigate("/tasks?role=sales")}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {isLoading ? (
+          Array(4).fill(0).map((_, i) => (
+            <Card key={i} className="border-border">
+              <CardContent className="p-6 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-4 w-32" />
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <>
+            <StatsCard
+              title="New Leads"
+              value={String(pendingLeads.length)}
+              change="+2 this week"
+              changeType="positive"
+              icon={UserPlus}
+            />
+            <StatsCard
+              title="Active Deals"
+              value={String(activeDeals.length)}
+              change="Priority focus"
+              changeType="neutral"
+              icon={Phone}
+            />
+            <StatsCard
+              title="Pipeline Value"
+              value={`$${(totalValue / 1000).toFixed(1)}k`}
+              change="Expected revenue"
+              changeType="positive"
+              icon={DollarSign}
+            />
+            <StatsCard
+              title="Conversion Rate"
+              value={`${conversionRate}%`}
+              change="Lead to Client"
+              changeType="neutral"
+              icon={CheckCircle}
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Calls Panel */}
-        <Card id="upcoming-calls-panel" className="border-border">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Upcoming Calls</CardTitle>
+        {/* Recent Leads */}
+        <Card className="border-border bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-base font-semibold">Active Pipeline</CardTitle>
+            <Link to="/clients" className="text-xs text-primary hover:underline flex items-center gap-1">
+              View All <ArrowRight size={12} />
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {upcomingCalls.map((call) => (
-              <div
-                key={call.id}
-                onClick={() => handleCallClick(call)}
-                className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
-              >
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Phone size={16} className="text-primary" />
+          <CardContent>
+            <div className="space-y-4">
+              {pendingLeads.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground border-2 border-dashed border-border rounded-lg">
+                  <Users size={32} className="mx-auto mb-2 opacity-10" />
+                  <p className="text-sm">No new leads in the pipeline.</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground">{call.client}</p>
-                  <p className="text-sm text-muted-foreground">{call.contact}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-foreground">{call.time}</p>
-                  <p className="text-xs text-muted-foreground">{call.date}</p>
-                </div>
-              </div>
-            ))}
+              ) : (
+                pendingLeads.slice(0, 5).map((lead) => (
+                  <div key={lead.id} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-9 w-9 border border-border">
+                        <AvatarFallback className="bg-primary/5 text-primary text-xs">
+                          {lead.name.split(" ").map(n => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium leading-none">{lead.name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{lead.contact}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm font-semibold">{lead.value}</span>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <MoreHorizontal size={14} />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Tasks Panel using TaskItemCard component */}
+        {/* Action Center / Tasks */}
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Tasks in Progress</CardTitle>
+            <CardTitle className="text-base font-semibold">Today's Outreach</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {tasks.map((task) => (
-              <TaskItemCard
-                key={task.id}
-                task={task}
-                onClick={handleTaskClick}
-                onStatusChange={handleTaskStatusChange}
-              />
-            ))}
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none">Priority</Badge>
+                  <span className="text-sm font-medium">Follow up with high-value leads</span>
+                </div>
+                <ArrowRight size={14} className="text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">3 leads have been in "Pending" status for more than 48 hours.</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors border border-border/50">
+                <div className="p-2 rounded-lg bg-green-500/10 text-green-600">
+                  <Phone size={14} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Discovery Call: Acme Corp</p>
+                  <p className="text-xs text-muted-foreground">Today at 2:00 PM</p>
+                </div>
+                <Button size="sm" variant="ghost">Details</Button>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/50 transition-colors border border-border/50">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
+                  <FileText size={14} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Proposal Prep: InnovateX</p>
+                  <p className="text-xs text-muted-foreground">Due by EOD</p>
+                </div>
+                <Button size="sm" variant="ghost">Open</Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Add Client Modal */}
-      <AddClientModal 
-        open={isAddClientOpen} 
-        onOpenChange={setIsAddClientOpen} 
-      />
-
-      {/* Schedule Call Modal */}
-      <ScheduleCallModal 
-        open={isScheduleCallOpen} 
-        onOpenChange={setIsScheduleCallOpen}
-        onConfirm={handleScheduleCall}
-      />
-
-      {/* Call Details Panel */}
-      <Dialog open={isCallDetailsOpen} onOpenChange={setIsCallDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Add Lead Dialog */}
+      <Dialog open={isAddLeadOpen} onOpenChange={setIsAddLeadOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Phone size={20} className="text-primary" />
-              Call Details
-            </DialogTitle>
+            <DialogTitle>Capture New Lead</DialogTitle>
           </DialogHeader>
-          
-          {selectedCall && (
-            <div className="space-y-4 py-4">
-              {/* Client Info */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getInitials(selectedCall.client)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold text-foreground">{selectedCall.client}</p>
-                  <p className="text-sm text-muted-foreground">{selectedCall.contact}</p>
-                </div>
-              </div>
-
-              {/* Time & Date */}
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                <CalendarIcon size={18} className="text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{selectedCall.time}</p>
-                  <p className="text-sm text-muted-foreground">{selectedCall.date}</p>
-                </div>
-              </div>
-
-              {/* Contact Details */}
-              <div className="space-y-2">
-                {selectedCall.email && (
-                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
-                    <Mail size={16} className="text-muted-foreground" />
-                    <span className="text-sm">{selectedCall.email}</span>
-                  </div>
-                )}
-                {selectedCall.phone && (
-                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
-                    <Phone size={16} className="text-muted-foreground" />
-                    <span className="text-sm">{selectedCall.phone}</span>
-                  </div>
-                )}
-                {selectedCall.meetingLink && (
-                  <div className="flex items-center gap-3 p-2 rounded hover:bg-secondary/50">
-                    <Video size={16} className="text-muted-foreground" />
-                    <a href={selectedCall.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                      Join Meeting <ExternalLink size={12} />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              {/* Attendees */}
-              {selectedCall.attendees && selectedCall.attendees.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Attendees</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCall.attendees.map((attendee, index) => (
-                      <Badge key={index} variant="secondary">
-                        {attendee}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {selectedCall.notes && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Notes</p>
-                  <p className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-lg">
-                    {selectedCall.notes}
-                  </p>
-                </div>
-              )}
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Lead Name</Label>
+              <Input
+                id="name"
+                value={leadForm.name}
+                onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
+                placeholder="Client or Company Name"
+              />
             </div>
-          )}
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsCallDetailsOpen(false)}>
-              Close
-            </Button>
-            {selectedCall?.meetingLink && (
-              <Button asChild>
-                <a href={selectedCall.meetingLink} target="_blank" rel="noopener noreferrer">
-                  <Video size={16} className="mr-2" />
-                  Join Call
-                </a>
-              </Button>
-            )}
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={leadForm.email}
+                onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
+                placeholder="contact@company.com"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contact">Primary Contact</Label>
+              <Input
+                id="contact"
+                value={leadForm.contact}
+                onChange={(e) => setLeadForm({ ...leadForm, contact: e.target.value })}
+                placeholder="John Smith"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="value">Expected Value</Label>
+              <Input
+                id="value"
+                value={leadForm.value}
+                onChange={(e) => setLeadForm({ ...leadForm, value: e.target.value })}
+                placeholder="$5,000"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddLeadOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddLead}>Save Lead</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Task Details Sidebar */}
-      <TaskDetailsSidebar
-        task={selectedTask}
-        open={isTaskSidebarOpen}
-        onOpenChange={setIsTaskSidebarOpen}
-      />
+      {/* Quick Proposal Dialog */}
+      <Dialog open={isDraftProposalOpen} onOpenChange={setIsDraftProposalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Quick Proposal Draft</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Proposal Title</Label>
+              <Input
+                id="title"
+                value={proposalForm.title}
+                onChange={(e) => setProposalForm({ ...proposalForm, title: e.target.value })}
+                placeholder="Q1 Growth Strategy"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="p-client">Client</Label>
+              <Input
+                id="p-client"
+                value={proposalForm.client}
+                onChange={(e) => setProposalForm({ ...proposalForm, client: e.target.value })}
+                placeholder="Acme Corp"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="p-value">Quoted Value</Label>
+              <Input
+                id="p-value"
+                value={proposalForm.value}
+                onChange={(e) => setProposalForm({ ...proposalForm, value: e.target.value })}
+                placeholder="$12,500"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDraftProposalOpen(false)}>Cancel</Button>
+            <Button onClick={handleDraftProposal}>Generate Draft</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

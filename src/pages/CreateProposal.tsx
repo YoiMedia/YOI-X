@@ -13,6 +13,7 @@ import { ArrowLeft, FileText, Send, Eye, CalendarIcon, IndianRupee } from "lucid
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useData } from "@/contexts/DataContext";
 
 const availableServices = [
   { id: "service-a", name: "Service A", basePrice: 50000 },
@@ -23,6 +24,7 @@ const availableServices = [
 export default function CreateProposal() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addActivity } = useData(); // We can add proposals to context too if needed, for now just activity
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -53,10 +55,18 @@ export default function CreateProposal() {
   };
 
   const handleSendToClient = () => {
+    addActivity({
+      actor_name: "Sales Rep",
+      actor_initials: "SR",
+      action_text: `sent a proposal for ₹${displayPrice.toLocaleString("en-IN")}`,
+      timestamp: "Just now",
+    });
+
     toast({
       title: "Proposal sent to client",
       description: "The proposal has been sent for signature",
     });
+
     setTimeout(() => {
       navigate("/proposals");
     }, 1500);
@@ -78,9 +88,7 @@ export default function CreateProposal() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left Column - Form */}
           <div className="space-y-6">
-            {/* Select Services */}
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Select Services</CardTitle>
@@ -109,7 +117,6 @@ export default function CreateProposal() {
               </CardContent>
             </Card>
 
-            {/* Description */}
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Description</CardTitle>
@@ -124,7 +131,6 @@ export default function CreateProposal() {
               </CardContent>
             </Card>
 
-            {/* Pricing */}
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Pricing</CardTitle>
@@ -148,7 +154,6 @@ export default function CreateProposal() {
               </CardContent>
             </Card>
 
-            {/* Timeline */}
             <Card className="border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold">Timeline</CardTitle>
@@ -182,58 +187,38 @@ export default function CreateProposal() {
             </Card>
           </div>
 
-          {/* Right Column - Preview Panel */}
           <div className="space-y-6">
-            {/* PDF Preview Panel */}
             <Card className="border-border h-full">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <FileText size={16} />
-                  Proposal PDF Preview (Placeholder)
+                  Proposal PDF Preview
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {showPreview ? (
-                  <div className="aspect-[8.5/11] bg-white border rounded-lg p-6 text-sm space-y-4 shadow-sm">
+                  <div className="aspect-[8.5/11] bg-white border rounded-lg p-6 text-sm space-y-4 shadow-sm text-gray-800">
                     <div className="text-center border-b pb-4">
-                      <h3 className="font-bold text-lg text-gray-800">PROPOSAL</h3>
+                      <h3 className="font-bold text-lg">PROPOSAL</h3>
                       <p className="text-gray-500">Business Services Agreement</p>
                     </div>
-                    
                     <div className="space-y-3">
-                      <p className="font-semibold text-gray-700">Selected Services:</p>
-                      {selectedServices.length > 0 ? (
-                        selectedServices.map((id) => {
-                          const service = availableServices.find((s) => s.id === id);
-                          return (
-                            <div key={id} className="flex justify-between text-gray-600 text-sm">
-                              <span>• {service?.name}</span>
-                              <span>₹{service?.basePrice.toLocaleString("en-IN")}</span>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <p className="text-gray-400 italic">No services selected</p>
-                      )}
+                      <p className="font-semibold">Selected Services:</p>
+                      {selectedServices.map((id) => {
+                        const service = availableServices.find((s) => s.id === id);
+                        return (
+                          <div key={id} className="flex justify-between text-sm">
+                            <span>• {service?.name}</span>
+                            <span>₹{service?.basePrice.toLocaleString("en-IN")}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-
-                    {description && (
-                      <div className="space-y-1">
-                        <p className="font-semibold text-gray-700">Description:</p>
-                        <p className="text-gray-600 text-xs">{description.slice(0, 200)}...</p>
-                      </div>
-                    )}
-
                     <div className="border-t pt-4 mt-auto">
-                      <div className="flex justify-between font-bold text-gray-800">
+                      <div className="flex justify-between font-bold">
                         <span>Total:</span>
                         <span>₹{displayPrice.toLocaleString("en-IN")}</span>
                       </div>
-                      {timeline && (
-                        <p className="text-gray-500 text-sm mt-1">
-                          Delivery by: {format(timeline, "MMMM d, yyyy")}
-                        </p>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -250,7 +235,6 @@ export default function CreateProposal() {
           </div>
         </div>
 
-        {/* Bottom Bar Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t border-border">
           <Button variant="secondary" onClick={handleGeneratePreview}>
             <Eye size={16} className="mr-2" />

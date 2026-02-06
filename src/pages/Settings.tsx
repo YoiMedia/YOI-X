@@ -19,7 +19,7 @@ export default function Settings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Company Name</Label>
-                <Input defaultValue="Enterprise Inc." />
+                <Input defaultValue="YOI MEDIA Inc." />
               </div>
               <div className="space-y-2">
                 <Label>Industry</Label>

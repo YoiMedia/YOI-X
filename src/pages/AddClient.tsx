@@ -6,18 +6,59 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Save, Send, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useData } from "@/contexts/DataContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AddClient() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { addClient, addActivity } = useData();
   const [formData, setFormData] = useState({
     clientName: "",
-    uniqueId: "CLT-2025-001",
+    uniqueId: `CLT-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
     phone: "",
     altPhone: "",
     email: "",
     website: "",
     address: "",
   });
+
+  const handleSave = (sendLink: boolean) => {
+    if (!formData.clientName || !formData.email || !formData.phone) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields (*)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addClient({
+      name: formData.clientName,
+      contact: formData.clientName.split(' ')[0],
+      email: formData.email,
+      status: "active",
+      value: "$0",
+      phone: formData.phone,
+      website: formData.website,
+      address: formData.address,
+    });
+
+    addActivity({
+      actor_name: "Admin",
+      actor_initials: "AD",
+      action_text: `added new client: ${formData.clientName}`,
+      timestamp: "Just now",
+    });
+
+    toast({
+      title: "Client Added",
+      description: sendLink ? "Client saved and magic link sent." : "Client saved successfully.",
+    });
+
+    navigate("/clients");
+  };
 
   return (
     <AppLayout title="Add New Client">
@@ -121,11 +162,11 @@ export default function AddClient() {
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button className="flex-1">
+              <Button className="flex-1" onClick={() => handleSave(true)}>
                 <Send size={16} className="mr-2" />
                 Save & Send Magic Link
               </Button>
-              <Button variant="outline" className="flex-1">
+              <Button variant="outline" className="flex-1" onClick={() => handleSave(false)}>
                 <Save size={16} className="mr-2" />
                 Save Only
               </Button>
