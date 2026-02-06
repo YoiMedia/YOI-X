@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { FolderKanban, FileText, FileSignature, Receipt, Calendar as CalendarIcon, MessageSquare, Upload, CheckCircle, Clock, X, Sparkles } from "lucide-react";
+import { FolderKanban, FileText, FileSignature, Receipt, Calendar as CalendarIcon, MessageSquare, Upload, CheckCircle, Clock, X, Sparkles, Download, ExternalLink, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
@@ -21,12 +22,69 @@ interface Project {
   progress: number;
   startDate: string;
   endDate: string;
+  description: string;
+  services: string[];
+  documents: { name: string; type: string; date: string }[];
+  recentUpdates: { text: string; date: string }[];
 }
 
 const initialProjects: Project[] = [
-  { id: 1, name: "Website Redesign", status: "in_progress", progress: 65, startDate: "Jan 15", endDate: "Mar 30" },
-  { id: 2, name: "Mobile App Development", status: "in_progress", progress: 40, startDate: "Feb 1", endDate: "May 15" },
-  { id: 3, name: "Marketing Campaign", status: "pending", progress: 15, startDate: "Feb 10", endDate: "Apr 20" },
+  { 
+    id: 1, 
+    name: "Website Redesign", 
+    status: "in_progress", 
+    progress: 65, 
+    startDate: "Jan 15", 
+    endDate: "Mar 30",
+    description: "Complete redesign of the company website with modern UI/UX, responsive design, and improved performance.",
+    services: ["UI/UX Design", "Frontend Development", "SEO Optimization", "Content Migration"],
+    documents: [
+      { name: "Website Redesign Proposal.pdf", type: "proposal", date: "Jan 10" },
+      { name: "Design Mockups v2.fig", type: "design", date: "Jan 28" },
+      { name: "Technical Specifications.docx", type: "document", date: "Feb 1" }
+    ],
+    recentUpdates: [
+      { text: "Homepage design completed and approved", date: "Feb 5" },
+      { text: "Mobile responsive layouts in progress", date: "Feb 3" },
+      { text: "Initial wireframes delivered", date: "Jan 25" }
+    ]
+  },
+  { 
+    id: 2, 
+    name: "Mobile App Development", 
+    status: "in_progress", 
+    progress: 40, 
+    startDate: "Feb 1", 
+    endDate: "May 15",
+    description: "Cross-platform mobile application for iOS and Android with real-time features and offline support.",
+    services: ["App Development", "API Integration", "Push Notifications", "Analytics Setup"],
+    documents: [
+      { name: "Mobile App Proposal.pdf", type: "proposal", date: "Jan 28" },
+      { name: "App Architecture.pdf", type: "document", date: "Feb 5" }
+    ],
+    recentUpdates: [
+      { text: "User authentication module completed", date: "Feb 4" },
+      { text: "Database schema finalized", date: "Feb 2" },
+      { text: "Project kickoff meeting held", date: "Feb 1" }
+    ]
+  },
+  { 
+    id: 3, 
+    name: "Marketing Campaign", 
+    status: "pending", 
+    progress: 15, 
+    startDate: "Feb 10", 
+    endDate: "Apr 20",
+    description: "Multi-channel digital marketing campaign including social media, email marketing, and PPC advertising.",
+    services: ["Social Media Management", "Email Marketing", "PPC Advertising", "Analytics & Reporting"],
+    documents: [
+      { name: "Marketing Strategy.pdf", type: "proposal", date: "Feb 8" }
+    ],
+    recentUpdates: [
+      { text: "Campaign strategy document delivered", date: "Feb 8" },
+      { text: "Initial planning phase started", date: "Feb 6" }
+    ]
+  },
 ];
 
 const documents = [
@@ -121,6 +179,10 @@ export function ClientDashboard() {
   // Confetti State
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // Project Detail Sidebar State
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isProjectSidebarOpen, setIsProjectSidebarOpen] = useState(false);
+
   const handleScheduleCall = () => {
     if (callDate && callTime) {
       setIsScheduleOpen(false);
@@ -134,7 +196,8 @@ export function ClientDashboard() {
     }
   };
 
-  const openRevisionModal = (projectId: number) => {
+  const openRevisionModal = (projectId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     setRevisionProjectId(projectId);
     setIsRevisionOpen(true);
   };
@@ -158,9 +221,16 @@ export function ClientDashboard() {
 
   const handleSubmitRevision = () => {
     if (revisionProjectId && revisionComment) {
-      setProjects(prev => prev.map(p => 
-        p.id === revisionProjectId ? { ...p, status: "revision_requested" as const } : p
-      ));
+      setProjects(prev => prev.map(p => {
+        if (p.id === revisionProjectId) {
+          const updatedProject = { ...p, status: "revision_requested" as const };
+          if (selectedProject?.id === revisionProjectId) {
+            setSelectedProject(updatedProject);
+          }
+          return updatedProject;
+        }
+        return p;
+      }));
       setIsRevisionOpen(false);
       toast({
         title: "Revision requested",
@@ -172,16 +242,37 @@ export function ClientDashboard() {
     }
   };
 
-  const handleApproveDeliverable = (projectId: number) => {
-    setProjects(prev => prev.map(p => 
-      p.id === projectId ? { ...p, status: "approved" as const, progress: 100 } : p
-    ));
+  const handleApproveDeliverable = (projectId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        const updatedProject = { ...p, status: "approved" as const, progress: 100 };
+        if (selectedProject?.id === projectId) {
+          setSelectedProject(updatedProject);
+        }
+        return updatedProject;
+      }
+      return p;
+    }));
     setShowConfetti(true);
     toast({
       title: "Deliverable approved! 🎉",
       description: "Thank you for approving the project deliverables",
     });
     setTimeout(() => setShowConfetti(false), 3000);
+  };
+
+  const handleProjectClick = (project: Project) => {
+    setSelectedProject(project);
+    setIsProjectSidebarOpen(true);
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "revision_requested": return "Revision Requested";
+      case "in_progress": return "In Progress";
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
+    }
   };
 
   return (
@@ -208,28 +299,31 @@ export function ClientDashboard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {projects.map((project) => (
-            <div key={project.id} className={cn(
-              "p-4 rounded-lg transition-all",
-              project.status === "approved" ? "bg-emerald-50 border border-emerald-200" :
-              project.status === "revision_requested" ? "bg-orange-50 border border-orange-200" :
-              "bg-secondary/50"
-            )}>
+            <div 
+              key={project.id} 
+              onClick={() => handleProjectClick(project)}
+              className={cn(
+                "p-4 rounded-lg transition-all cursor-pointer group",
+                project.status === "approved" ? "bg-emerald-50 border border-emerald-200 hover:bg-emerald-100/70" :
+                project.status === "revision_requested" ? "bg-orange-50 border border-orange-200 hover:bg-orange-100/70" :
+                "bg-secondary/50 hover:bg-secondary"
+              )}
+            >
               <div className="flex items-start justify-between mb-4">
-                <div>
+                <div className="flex-1">
                   <h3 className="font-semibold text-foreground flex items-center gap-2">
                     {project.name}
                     {project.status === "approved" && (
                       <Sparkles size={16} className="text-emerald-500" />
                     )}
+                    <ArrowRight size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </h3>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {project.startDate} - {project.endDate}
                   </p>
                 </div>
                 <Badge variant="outline" className={statusColors[project.status]}>
-                  {project.status === "revision_requested" ? "Revision Requested" :
-                   project.status === "in_progress" ? "In Progress" :
-                   project.status.charAt(0).toUpperCase() + project.status.slice(1)}
+                  {getStatusLabel(project.status)}
                 </Badge>
               </div>
               <div className="space-y-2">
@@ -246,7 +340,7 @@ export function ClientDashboard() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => openRevisionModal(project.id)}
+                    onClick={(e) => openRevisionModal(project.id, e)}
                   >
                     <MessageSquare size={14} className="mr-1" />
                     Request Revision
@@ -254,7 +348,7 @@ export function ClientDashboard() {
                   {project.progress >= 50 && (
                     <Button
                       size="sm"
-                      onClick={() => handleApproveDeliverable(project.id)}
+                      onClick={(e) => handleApproveDeliverable(project.id, e)}
                     >
                       <CheckCircle size={14} className="mr-1" />
                       Approve Deliverable
@@ -380,7 +474,7 @@ export function ClientDashboard() {
               Cancel
             </Button>
             <Button onClick={handleScheduleCall} disabled={!callDate || !callTime}>
-              Schedule Call
+              Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -471,6 +565,142 @@ export function ClientDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Project Detail Sidebar */}
+      <Sheet open={isProjectSidebarOpen} onOpenChange={setIsProjectSidebarOpen}>
+        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <FolderKanban size={20} className="text-primary" />
+              Project Details
+            </SheetTitle>
+          </SheetHeader>
+
+          {selectedProject && (
+            <div className="mt-6 space-y-6">
+              {/* Project Header */}
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    {selectedProject.name}
+                    {selectedProject.status === "approved" && (
+                      <Sparkles size={16} className="text-emerald-500" />
+                    )}
+                  </h3>
+                  <Badge className={cn("whitespace-nowrap", statusColors[selectedProject.status])}>
+                    {getStatusLabel(selectedProject.status)}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{selectedProject.description}</p>
+              </div>
+
+              {/* Timeline */}
+              <div className="p-4 rounded-lg bg-secondary/50">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-muted-foreground" />
+                    <span className="text-sm font-medium">Timeline</span>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedProject.startDate} - {selectedProject.endDate}
+                  </span>
+                </div>
+                <Progress value={selectedProject.progress} className="h-3" />
+                <p className="text-sm text-muted-foreground mt-2 text-right">
+                  {selectedProject.progress}% Complete
+                </p>
+              </div>
+
+              {/* Services */}
+              <div>
+                <p className="text-sm font-medium mb-3">Services ({selectedProject.services.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProject.services.map((service, index) => (
+                    <Badge key={index} variant="outline" className="bg-background">
+                      {service}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div>
+                <p className="text-sm font-medium mb-3">Documents ({selectedProject.documents.length})</p>
+                <div className="space-y-2">
+                  {selectedProject.documents.map((doc, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center justify-between p-3 rounded-lg border border-border bg-background"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded bg-secondary">
+                          <FileText size={14} className="text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">{doc.date}</p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="ghost">
+                        <Download size={14} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Updates */}
+              <div>
+                <p className="text-sm font-medium mb-3">Recent Updates</p>
+                <div className="space-y-3">
+                  {selectedProject.recentUpdates.map((update, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                      <div className="mt-1 w-2 h-2 rounded-full bg-primary flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground">{update.text}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{update.date}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons in Sidebar */}
+              {selectedProject.status !== "approved" && (
+                <div className="flex gap-2 pt-4 border-t border-border">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={(e) => openRevisionModal(selectedProject.id, e)}
+                  >
+                    <MessageSquare size={14} className="mr-2" />
+                    Request Revision
+                  </Button>
+                  {selectedProject.progress >= 50 && (
+                    <Button
+                      className="flex-1"
+                      onClick={(e) => handleApproveDeliverable(selectedProject.id, e)}
+                    >
+                      <CheckCircle size={14} className="mr-2" />
+                      Approve
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {selectedProject.status === "approved" && (
+                <div className="p-4 bg-emerald-50 rounded-lg flex items-center gap-3 border border-emerald-200">
+                  <CheckCircle size={24} className="text-emerald-600" />
+                  <div>
+                    <p className="font-medium text-emerald-700">Project Approved!</p>
+                    <p className="text-sm text-emerald-600">All deliverables have been accepted</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
