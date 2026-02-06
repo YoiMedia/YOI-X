@@ -1,23 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Handshake, FileText, FileSignature, Phone, CheckSquare, Plus, Calendar as CalendarIcon, User, Clock, X, Video, Mail, MapPin, ExternalLink, Download } from "lucide-react";
+import { Handshake, FileText, FileSignature, Phone, CheckSquare, Plus, Calendar as CalendarIcon, Video, Mail, ExternalLink } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { AddClientModal } from "@/components/sales/AddClientModal";
+import { ScheduleCallModal, CallScheduleData } from "@/components/sales/ScheduleCallModal";
+import { TaskItemCard, TaskItem } from "@/components/sales/TaskItemCard";
+import { TaskDetailsSidebar } from "@/components/sales/TaskDetailsSidebar";
 
 interface Call {
   id: number;
@@ -30,17 +25,6 @@ interface Call {
   meetingLink?: string;
   notes?: string;
   attendees?: string[];
-}
-
-interface Task {
-  id: number;
-  title: string;
-  priority: "high" | "medium" | "low";
-  dueDate: string;
-  description?: string;
-  status?: "not_started" | "in_progress" | "completed";
-  relatedClient?: string;
-  assignee?: string;
 }
 
 const initialUpcomingCalls: Call[] = [
@@ -92,7 +76,7 @@ const initialUpcomingCalls: Call[] = [
   },
 ];
 
-const initialTasks: Task[] = [
+const initialTasks: TaskItem[] = [
   { 
     id: 1, 
     title: "Follow up with Acme Corp", 
@@ -134,68 +118,24 @@ const initialTasks: Task[] = [
   },
 ];
 
-const priorityColors = {
-  high: "bg-red-100 text-red-700 border-red-200",
-  medium: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  low: "bg-green-100 text-green-700 border-green-200",
-};
-
-const statusColors = {
-  not_started: "bg-gray-100 text-gray-700",
-  in_progress: "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
-};
-
-const timeSlots = [
-  "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
-  "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
-];
-
-const employees = [
-  { id: 1, name: "Sarah Johnson" },
-  { id: 2, name: "Mike Thompson" },
-  { id: 3, name: "Emily Chen" },
-  { id: 4, name: "David Wilson" },
-  { id: 5, name: "Lisa Anderson" },
-];
-
 export function SalesDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Client Modal State
+  // Modal States
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
-  const [clientForm, setClientForm] = useState({
-    clientName: "",
-    phone: "",
-    altPhone: "",
-    email: "",
-    website: "",
-    address: "",
-    uniqueId: "CLT-2025-" + String(Math.floor(Math.random() * 900) + 100),
-  });
-
-  // Schedule Call Modal State
   const [isScheduleCallOpen, setIsScheduleCallOpen] = useState(false);
-  const [callDate, setCallDate] = useState<Date | undefined>(undefined);
-  const [callTime, setCallTime] = useState("");
-  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-  const [callNotes, setCallNotes] = useState("");
-  const [callClient, setCallClient] = useState("");
   
-  // Upcoming Calls State
+  // Data States
   const [upcomingCalls, setUpcomingCalls] = useState<Call[]>(initialUpcomingCalls);
-  
-  // Tasks State
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+  const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
 
   // Call Details Panel State
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
   const [isCallDetailsOpen, setIsCallDetailsOpen] = useState(false);
 
   // Task Details Sidebar State
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
 
   // Scroll to upcoming calls panel
@@ -206,74 +146,17 @@ export function SalesDashboard() {
     }
   };
 
-  const resetClientForm = () => {
-    setClientForm({
-      clientName: "",
-      phone: "",
-      altPhone: "",
-      email: "",
-      website: "",
-      address: "",
-      uniqueId: "CLT-2025-" + String(Math.floor(Math.random() * 900) + 100),
-    });
-  };
-
-  const resetCallForm = () => {
-    setCallDate(undefined);
-    setCallTime("");
-    setSelectedEmployees([]);
-    setCallNotes("");
-    setCallClient("");
-  };
-
-  const handleSaveClient = (sendLink: boolean) => {
-    setIsAddClientOpen(false);
-    toast({
-      title: "Client created successfully",
-      description: sendLink 
-        ? `Login link sent to ${clientForm.email}` 
-        : `${clientForm.clientName} has been added to your clients`,
-    });
-    resetClientForm();
-  };
-
-  const handleCancelClient = () => {
-    setIsAddClientOpen(false);
-    resetClientForm();
-  };
-
-  const handleConfirmCall = () => {
-    if (callDate && callTime && callClient) {
-      const newCall: Call = {
-        id: upcomingCalls.length + 1,
-        client: callClient,
-        contact: employees.find(e => selectedEmployees.includes(e.id))?.name || "TBD",
-        time: callTime,
-        date: format(callDate, "MMM d"),
-        notes: callNotes,
-        attendees: selectedEmployees.map(id => employees.find(e => e.id === id)?.name || ""),
-      };
-      setUpcomingCalls([...upcomingCalls, newCall]);
-      setIsScheduleCallOpen(false);
-      toast({
-        title: "Call scheduled successfully",
-        description: `Call with ${callClient} scheduled for ${format(callDate, "MMM d")} at ${callTime}`,
-      });
-      resetCallForm();
-    }
-  };
-
-  const handleCancelCall = () => {
-    setIsScheduleCallOpen(false);
-    resetCallForm();
-  };
-
-  const toggleEmployee = (employeeId: number) => {
-    setSelectedEmployees(prev =>
-      prev.includes(employeeId)
-        ? prev.filter(id => id !== employeeId)
-        : [...prev, employeeId]
-    );
+  const handleScheduleCall = (data: CallScheduleData) => {
+    const newCall: Call = {
+      id: upcomingCalls.length + 1,
+      client: "New Client",
+      contact: "TBD",
+      time: data.timeSlot,
+      date: format(data.date, "MMM d"),
+      notes: data.notes,
+      attendees: [],
+    };
+    setUpcomingCalls([...upcomingCalls, newCall]);
   };
 
   const handleCallClick = (call: Call) => {
@@ -281,15 +164,16 @@ export function SalesDashboard() {
     setIsCallDetailsOpen(true);
   };
 
-  const handleTaskClick = (task: Task) => {
+  const handleTaskClick = (task: TaskItem) => {
     setSelectedTask(task);
     setIsTaskSidebarOpen(true);
   };
 
-  const handleTaskStatusChange = (taskId: number, newStatus: Task["status"]) => {
+  const handleTaskStatusChange = (taskId: number, completed: boolean) => {
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
-        const updated = { ...t, status: newStatus };
+        const newStatus = completed ? "completed" : "not_started";
+        const updated = { ...t, status: newStatus as TaskItem["status"] };
         if (selectedTask?.id === taskId) {
           setSelectedTask(updated);
         }
@@ -299,7 +183,7 @@ export function SalesDashboard() {
     }));
     toast({
       title: "Task updated",
-      description: `Status changed to ${newStatus?.replace("_", " ")}`,
+      description: `Task marked as ${completed ? "completed" : "not started"}`,
     });
   };
 
@@ -330,6 +214,7 @@ export function SalesDashboard() {
         </div>
       </div>
 
+      {/* KPI Cards with Click Navigation */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatsCard
           title="My Deals"
@@ -374,6 +259,7 @@ export function SalesDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Upcoming Calls Panel */}
         <Card id="upcoming-calls-panel" className="border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Upcoming Calls</CardTitle>
@@ -401,251 +287,36 @@ export function SalesDashboard() {
           </CardContent>
         </Card>
 
+        {/* Tasks Panel using TaskItemCard component */}
         <Card className="border-border">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-semibold">Tasks in Progress</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {tasks.map((task) => (
-              <div
+              <TaskItemCard
                 key={task.id}
-                onClick={() => handleTaskClick(task)}
-                className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
-              >
-                <Checkbox 
-                  checked={task.status === "completed"}
-                  onClick={(e) => e.stopPropagation()}
-                  onCheckedChange={(checked) => {
-                    handleTaskStatusChange(task.id, checked ? "completed" : "not_started");
-                  }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    "font-medium",
-                    task.status === "completed" ? "line-through text-muted-foreground" : "text-foreground"
-                  )}>{task.title}</p>
-                  <p className="text-xs text-muted-foreground">Due: {task.dueDate}</p>
-                </div>
-                <Badge variant="outline" className={priorityColors[task.priority]}>
-                  {task.priority}
-                </Badge>
-              </div>
+                task={task}
+                onClick={handleTaskClick}
+                onStatusChange={handleTaskStatusChange}
+              />
             ))}
           </CardContent>
         </Card>
       </div>
 
       {/* Add Client Modal */}
-      <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User size={20} className="text-primary" />
-              Add New Client
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="modal-clientName">Client Name *</Label>
-                <Input
-                  id="modal-clientName"
-                  placeholder="Enter client or company name"
-                  value={clientForm.clientName}
-                  onChange={(e) => setClientForm({ ...clientForm, clientName: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modal-uniqueId">Client Unique ID</Label>
-                <Input
-                  id="modal-uniqueId"
-                  value={clientForm.uniqueId}
-                  disabled
-                  className="bg-secondary text-muted-foreground"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="modal-phone">Phone *</Label>
-                <Input
-                  id="modal-phone"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  value={clientForm.phone}
-                  onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modal-altPhone">Alternate Phone</Label>
-                <Input
-                  id="modal-altPhone"
-                  type="tel"
-                  placeholder="+1 (555) 000-0000"
-                  value={clientForm.altPhone}
-                  onChange={(e) => setClientForm({ ...clientForm, altPhone: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="modal-email">Email *</Label>
-                <Input
-                  id="modal-email"
-                  type="email"
-                  placeholder="client@company.com"
-                  value={clientForm.email}
-                  onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="modal-website">Website</Label>
-                <Input
-                  id="modal-website"
-                  type="url"
-                  placeholder="https://www.company.com"
-                  value={clientForm.website}
-                  onChange={(e) => setClientForm({ ...clientForm, website: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="modal-address">Address</Label>
-              <Textarea
-                id="modal-address"
-                placeholder="Enter full address"
-                value={clientForm.address}
-                onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
-                className="min-h-[70px]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleCancelClient}>
-              Cancel
-            </Button>
-            <Button variant="secondary" onClick={() => handleSaveClient(false)}>
-              Save Only
-            </Button>
-            <Button onClick={() => handleSaveClient(true)}>
-              Save & Send Login Link
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddClientModal 
+        open={isAddClientOpen} 
+        onOpenChange={setIsAddClientOpen} 
+      />
 
       {/* Schedule Call Modal */}
-      <Dialog open={isScheduleCallOpen} onOpenChange={setIsScheduleCallOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Clock size={20} className="text-primary" />
-              Schedule Call
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="call-client">Client Name *</Label>
-              <Input
-                id="call-client"
-                placeholder="Enter client name"
-                value={callClient}
-                onChange={(e) => setCallClient(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Select Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !callDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {callDate ? format(callDate, "PPP") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={callDate}
-                    onSelect={setCallDate}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Select Time *</Label>
-              <Select value={callTime} onValueChange={setCallTime}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a time slot" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map((slot) => (
-                    <SelectItem key={slot} value={slot}>
-                      {slot}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Invite Employees</Label>
-              <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg bg-secondary/30">
-                {employees.map((employee) => (
-                  <div
-                    key={employee.id}
-                    className={cn(
-                      "flex items-center gap-2 p-2 rounded cursor-pointer transition-colors",
-                      selectedEmployees.includes(employee.id)
-                        ? "bg-primary/10 border border-primary"
-                        : "hover:bg-secondary"
-                    )}
-                    onClick={() => toggleEmployee(employee.id)}
-                  >
-                    <Checkbox checked={selectedEmployees.includes(employee.id)} />
-                    <span className="text-sm">{employee.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="call-notes">Notes</Label>
-              <Textarea
-                id="call-notes"
-                placeholder="Add any notes for the call..."
-                value={callNotes}
-                onChange={(e) => setCallNotes(e.target.value)}
-                className="min-h-[70px]"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={handleCancelCall}>
-              Cancel
-            </Button>
-            <Button onClick={handleConfirmCall} disabled={!callDate || !callTime || !callClient}>
-              Confirm Call
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ScheduleCallModal 
+        open={isScheduleCallOpen} 
+        onOpenChange={setIsScheduleCallOpen}
+        onConfirm={handleScheduleCall}
+      />
 
       {/* Call Details Panel */}
       <Dialog open={isCallDetailsOpen} onOpenChange={setIsCallDetailsOpen}>
@@ -748,120 +419,11 @@ export function SalesDashboard() {
       </Dialog>
 
       {/* Task Details Sidebar */}
-      <Sheet open={isTaskSidebarOpen} onOpenChange={setIsTaskSidebarOpen}>
-        <SheetContent className="w-[400px] sm:w-[480px]">
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <CheckSquare size={20} className="text-primary" />
-              Task Details
-            </SheetTitle>
-          </SheetHeader>
-
-          {selectedTask && (
-            <div className="mt-6 space-y-6">
-              {/* Task Title & Status */}
-              <div>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-foreground">{selectedTask.title}</h3>
-                  <Badge className={cn(statusColors[selectedTask.status || "not_started"])}>
-                    {selectedTask.status?.replace("_", " ") || "Not Started"}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Priority & Due Date */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-secondary/50">
-                  <p className="text-xs text-muted-foreground mb-1">Priority</p>
-                  <Badge variant="outline" className={priorityColors[selectedTask.priority]}>
-                    {selectedTask.priority}
-                  </Badge>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/50">
-                  <p className="text-xs text-muted-foreground mb-1">Due Date</p>
-                  <p className="font-medium">{selectedTask.dueDate}</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              {selectedTask.description && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Description</p>
-                  <p className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-lg">
-                    {selectedTask.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Related Client */}
-              {selectedTask.relatedClient && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Related Client</p>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                        {getInitials(selectedTask.relatedClient)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{selectedTask.relatedClient}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Assignee */}
-              {selectedTask.assignee && (
-                <div>
-                  <p className="text-sm font-medium mb-2">Assigned To</p>
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                        {getInitials(selectedTask.assignee)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{selectedTask.assignee}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Status Change */}
-              <div>
-                <p className="text-sm font-medium mb-2">Change Status</p>
-                <Select 
-                  value={selectedTask.status || "not_started"} 
-                  onValueChange={(value) => handleTaskStatusChange(selectedTask.id, value as Task["status"])}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_started">Not Started</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-4 border-t border-border">
-                <Button variant="outline" className="flex-1" onClick={() => navigate("/tasks")}>
-                  View All Tasks
-                </Button>
-                <Button 
-                  className="flex-1"
-                  onClick={() => {
-                    handleTaskStatusChange(selectedTask.id, "completed");
-                    setIsTaskSidebarOpen(false);
-                  }}
-                  disabled={selectedTask.status === "completed"}
-                >
-                  <CheckSquare size={16} className="mr-2" />
-                  Mark Complete
-                </Button>
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <TaskDetailsSidebar
+        task={selectedTask}
+        open={isTaskSidebarOpen}
+        onOpenChange={setIsTaskSidebarOpen}
+      />
     </div>
   );
 }
