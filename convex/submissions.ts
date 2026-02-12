@@ -1,17 +1,27 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+
 
 export const create = mutation({
   args: {
-    taskId: v.id("tasks"),
-    clientId: v.id("users"),
-    submittedBy: v.id("users"),
-    documents: v.array(v.string()),
+    submission_number: v.string(),
+    task_id: v.id("tasks"),
+    requirement_id: v.id("requirements"),
+    client_id: v.id("clients"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    deliverables: v.optional(v.array(v.string())),
+    status: v.string(),
+    submitted_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
     return await ctx.db.insert("submissions", {
       ...args,
-      status: "pending",
+      created_at: now,
+      updated_at: now,
     });
   },
 });
@@ -24,38 +34,43 @@ export const getById = query({
 });
 
 export const listByTask = query({
-  args: { taskId: v.id("tasks") },
+  args: { task_id: v.id("tasks") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("submissions")
-      .withIndex("by_taskId", (q) => q.eq("taskId", args.taskId))
+      .withIndex("by_task_id", (q) => q.eq("task_id", args.task_id))
       .collect();
   },
 });
 
 export const listPendingForClient = query({
-  args: { clientId: v.id("users") },
+  args: { client_id: v.id("clients") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("submissions")
-      .filter((q) => q.and(
-        q.eq(q.field("clientId"), args.clientId),
-        q.eq(q.field("status"), "pending")
-      ))
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) => q.eq(q.field("client_id"), args.client_id))
       .collect();
   },
 });
 
-export const setStatus = mutation({
+export const review = mutation({
   args: { 
     id: v.id("submissions"), 
-    status: v.union(v.literal("approved"), v.literal("rejected")),
-    feedback: v.optional(v.string()),
+    status: v.string(),
+    review_notes: v.optional(v.string()),
+    rejection_reason: v.optional(v.string()),
+    reviewed_by: v.id("users"),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { 
       status: args.status,
-      feedback: args.feedback,
+      review_notes: args.review_notes,
+      rejection_reason: args.rejection_reason,
+      reviewed_by: args.reviewed_by,
+      reviewed_at: Date.now(),
+      updated_at: Date.now(),
     });
   },
 });
+

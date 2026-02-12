@@ -3,7 +3,6 @@ import { useData } from "@/contexts/DataContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { LoadingScreen } from "@/components/ui/loading-screen";
 
 const roleColors: any = {
   admin: "bg-purple-500",
@@ -21,15 +21,11 @@ const roleColors: any = {
   employee: "bg-green-500",
   client: "bg-orange-500",
 };
-import { LoadingScreen } from "@/components/ui/loading-screen";
 
 export default function Employees() {
   const { users, isLoading, createUser } = useData();
   const { user: currentUser } = useAuth();
 
-  if (isLoading) {
-    return <LoadingScreen message="Accessing personnel files..." />;
-  }
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   
@@ -43,16 +39,28 @@ export default function Employees() {
     role: "sales" as any,
   });
 
-  const filteredUsers = users.filter(u =>
-    (u.fullname ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+  if (isLoading) {
+    return <LoadingScreen message="Accessing personnel files..." />;
+  }
+
+  const filteredUsers = (users || []).filter(u =>
+    (u.full_name ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
     (u.role ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (u.email ?? "").toLowerCase().includes(searchQuery.toLowerCase())
+    (u.email ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (u.username ?? "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createUser(formData);
+      await createUser({
+        full_name: formData.fullname,
+        username: formData.username,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: formData.role,
+      });
       toast.success(`User ${formData.fullname} created as ${formData.role}`);
       setIsAddUserOpen(false);
       setFormData({ fullname: "", username: "", email: "", phone: "", password: "", role: "sales" });
@@ -134,21 +142,7 @@ export default function Employees() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {isLoading ? (
-            Array(6).fill(0).map((_, i) => (
-              <Card key={i} className="border-border">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : filteredUsers.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <div className="col-span-full py-20 text-center text-muted-foreground border-2 border-dashed border-border rounded-lg bg-card">
               <Users size={48} className="mx-auto mb-4 opacity-10" />
               <p className="text-sm font-medium mb-1">No users found</p>
@@ -162,14 +156,14 @@ export default function Employees() {
                     <div className="relative">
                       <Avatar className="h-12 w-12">
                         <AvatarFallback className="bg-primary text-primary-foreground">
-                          {(u.fullname ?? "User").split(" ").map(n => n[0]).join("")}
+                          {(u.full_name ?? "User").split(" ").map(n => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
                       <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-card ${roleColors[u.role ?? "sales"]}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="font-semibold text-foreground truncate">{u.fullname ?? "Unnamed User"}</p>
+                        <p className="font-semibold text-foreground truncate">{u.full_name ?? "Unnamed User"}</p>
                         <Badge variant="outline" className="text-[10px] uppercase">{u.role ?? "none"}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">@{u.username ?? "user"}</p>

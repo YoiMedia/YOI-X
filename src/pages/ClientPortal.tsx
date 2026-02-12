@@ -51,13 +51,15 @@ export default function ClientPortal() {
 
   if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading your portal...</div>;
 
+  const requirementItems = Array.isArray(activeRequirement?.requirements) ? activeRequirement.requirements : [];
+
   return (
     <AppLayout title="Project Portal">
       <div className="space-y-8 max-w-6xl">
         {/* Welcome Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-foreground">Welcome back, {user?.fullname}</h2>
+            <h3 className="text-lg font-semibold text-foreground">Hello, {user?.full_name || "Client"}</h3>
             <p className="text-muted-foreground">Track your project progress and manage documents below.</p>
           </div>
           <Button variant="outline" className="gap-2">
@@ -87,7 +89,7 @@ export default function ClientPortal() {
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
-                {activeRequirement?.items.map((item, idx) => (
+                {requirementItems.map((item: any, idx: number) => (
                   <div key={idx} className="p-4 rounded-lg bg-secondary/30 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -95,13 +97,13 @@ export default function ClientPortal() {
                       </div>
                       <div>
                         <p className="font-medium text-sm">{item.title}</p>
-                        <p className="text-xs text-muted-foreground">Due: {item.dueDate}</p>
+                        <p className="text-xs text-muted-foreground">Due: {item.dueDate || "TBD"}</p>
                       </div>
                     </div>
-                    <Badge variant="ghost" className="text-[10px] uppercase tracking-wider">Upcoming</Badge>
+                    <Badge variant="outline" className="text-[10px] uppercase tracking-wider">Upcoming</Badge>
                   </div>
                 ))}
-                {!activeRequirement && (
+                {requirementItems.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground italic">
                     No active project requirements found.
                   </div>
@@ -122,7 +124,7 @@ export default function ClientPortal() {
                   {meetings.length > 0 ? (
                     <div>
                       <p className="text-sm font-semibold">{meetings[0].title}</p>
-                      <p className="text-xs text-muted-foreground">{meetings[0].scheduledAt}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(meetings[0].scheduled_at || Date.now()).toLocaleString()}</p>
                       <Button size="sm" className="mt-4 w-full">Join via Meet</Button>
                     </div>
                   ) : (
@@ -134,12 +136,12 @@ export default function ClientPortal() {
               <Card className="border-border">
                 <CardHeader className="pb-3"><CardTitle className="text-sm">Alerts</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
-                  {notifications.filter(n => !n.isRead).slice(0, 3).map(n => (
+                  {notifications.filter(n => !n.is_read).slice(0, 3).map(n => (
                     <div key={n._id} className="p-2 rounded bg-orange-50 border border-orange-100 flex gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5" />
+                       <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5" />
                       <div>
                         <p className="text-xs font-bold">{n.title}</p>
-                        {n.link && <Link to={n.link} className="text-[10px] text-orange-600 underline">Take Action</Link>}
+                        {n.action_url && <Link to={n.action_url} className="text-[10px] text-orange-600 underline">Take Action</Link>}
                       </div>
                     </div>
                   ))}
@@ -169,13 +171,13 @@ export default function ClientPortal() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground capitalize">{doc.type} Contract</p>
                         <p className="text-sm text-muted-foreground">
-                          {doc.isSigned ? "Signed" : "Waiting for Signature"}
+                          {doc.is_signed ? "Signed" : "Waiting for Signature"}
                         </p>
                       </div>
                       <div className="flex gap-2">
                         <Link to={`/portal/review?docId=${doc._id}`}>
                           <Button variant="outline" size="sm">
-                            {doc.isSigned ? "View" : "Review & Sign"}
+                            {doc.is_signed ? "View" : "Review & Sign"}
                           </Button>
                         </Link>
                       </div>

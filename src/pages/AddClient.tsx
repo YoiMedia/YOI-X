@@ -1,50 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Send, User } from "lucide-react";
+import { ArrowLeft, Save, Send, User, Building2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useData } from "@/contexts/DataContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function AddClient() {
   const navigate = useNavigate();
-  const { createUser, sendNotification } = useData();
+  const { addClient } = useData();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
-    clientName: "",
+    fullName: "",
     username: "",
     phone: "",
     altPhone: "",
     email: "",
     website: "",
     address: "",
+    companyName: "",
+    industry: "",
+    companySize: "",
     password: Math.random().toString(36).slice(-8), // Generate initial password
   });
 
+  useEffect(() => {
+    if (user && user.role !== "freelancer") {
+      toast.error("Access denied. Only freelancers can create clients.");
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
+
   const handleSave = async (sendLink: boolean) => {
-    if (!formData.clientName || !formData.email || !formData.phone || !formData.username) {
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.username || !formData.companyName) {
       toast.error("Please fill in all required fields (*)");
       return;
     }
 
+    if (!user || user.role !== "freelancer") {
+      toast.error("You must be logged in as a freelancer to create a client.");
+      return;
+    }
+
     try {
-      const clientId = await createUser({
-        fullname: formData.clientName,
+      await addClient({
+        fullName: formData.fullName,
         username: formData.username,
         email: formData.email,
         phone: formData.phone,
-        altPhone: formData.altPhone,
+        alternatePhone: formData.altPhone,
         website: formData.website,
+        address: formData.address,
         password: formData.password,
-        role: "client",
+        companyName: formData.companyName,
+        industry: formData.industry,
+        companySize: formData.companySize ? parseInt(formData.companySize) : undefined,
+        salesPersonId: user._id,
+        status: "active",
       });
 
       if (sendLink) {
-        // In a real app, this would trigger an email. 
-        // Here we'll simulate by adding a notification for the client.
         toast.success("Client account created and magic link simulated");
       } else {
         toast.success("Client account created successfully");
@@ -75,25 +95,25 @@ export default function AddClient() {
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-semibold flex items-center gap-2">
               <User size={18} className="text-primary" />
-              Client Information
+              Personal Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="clientName">Client Name *</Label>
+                <Label htmlFor="fullName">Full Name *</Label>
                 <Input
-                  id="clientName"
-                  placeholder="Enter client or company name"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                  id="fullName"
+                  placeholder="Enter full name"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="username">Unique ID (Username) *</Label>
+                <Label htmlFor="username">Username (Unique ID) *</Label>
                 <Input
                   id="username"
-                  placeholder="e.g. acme_corp"
+                  placeholder="e.g. johndoe_client"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
@@ -129,7 +149,7 @@ export default function AddClient() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="client@company.com"
+                  placeholder="client@example.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
@@ -155,6 +175,46 @@ export default function AddClient() {
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 className="min-h-[80px]"
               />
+            </div>
+          </CardContent>
+
+          <CardHeader className="pb-4 pt-4 border-t border-border">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Building2 size={18} className="text-primary" />
+              Company Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name *</Label>
+              <Input
+                id="companyName"
+                placeholder="Enter company name"
+                value={formData.companyName}
+                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="industry">Industry</Label>
+                <Input
+                  id="industry"
+                  placeholder="e.g. Technology, Retail"
+                  value={formData.industry}
+                  onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="companySize">Company Size (Employees)</Label>
+                <Input
+                  id="companySize"
+                  type="number"
+                  placeholder="e.g. 50"
+                  value={formData.companySize}
+                  onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
+                />
+              </div>
             </div>
 
             <div className="flex gap-3 pt-4">

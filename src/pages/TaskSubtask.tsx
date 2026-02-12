@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export default function TaskSubtask() {
   const { id } = useParams();
@@ -75,7 +76,7 @@ export default function TaskSubtask() {
       await sendNotification({
         userId: salesRep._id,
         title: "New Employee Doubt",
-        message: `${user?.fullname} has a question regarding "${task.title}".`,
+        message: `${user?.full_name} has a question regarding "${task.title}".`,
         type: "doubt",
         link: `/tasks/${taskId}`,
       });
@@ -173,7 +174,6 @@ export default function TaskSubtask() {
                         type="checkbox" 
                         checked={st.completed} 
                         onChange={() => handleToggleSubtask(i)}
-                        className="w-4 h-4 rounded text-primary"
                       />
                       <span className={cn("text-sm flex-1", st.completed && "line-through text-muted-foreground")}>
                         {st.text}

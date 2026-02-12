@@ -1,33 +1,36 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 export const create = mutation({
   args: {
-    requirementId: v.id("requirements"),
-    createdBy: v.id("users"),
-    assignedEmployeeId: v.id("users"),
+    task_number: v.string(),
     title: v.string(),
-    description: v.string(),
-    subtasks: v.array(v.object({
-      text: v.string(),
-      completed: v.boolean(),
-    })),
+    description: v.optional(v.string()),
+    requirement_id: v.id("requirements"),
+    assigned_to: v.optional(v.id("users")),
+    subtasks: v.optional(v.any()), // JSON
+    priority: v.optional(v.string()),
+    status: v.string(),
+    progress: v.number(),
+    created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
     return await ctx.db.insert("tasks", {
       ...args,
-      status: "todo",
-      progress: 0,
+      created_at: now,
+      updated_at: now,
     });
   },
 });
 
 export const listByRequirement = query({
-  args: { requirementId: v.id("requirements") },
+  args: { requirement_id: v.id("requirements") },
   handler: async (ctx, args) => {
     return await ctx.db
       .query("tasks")
-      .withIndex("by_requirementId", (q) => q.eq("requirementId", args.requirementId))
+      .withIndex("by_requirement_id", (q) => q.eq("requirement_id", args.requirement_id))
       .collect();
   },
 });
@@ -37,7 +40,7 @@ export const listForEmployee = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("tasks")
-      .withIndex("by_assignedEmployeeId", (q) => q.eq("assignedEmployeeId", args.employeeId))
+      .withIndex("by_assigned_to", (q) => q.eq("assigned_to", args.employeeId))
       .collect();
   },
 });
@@ -49,46 +52,54 @@ export const getById = query({
   },
 });
 
-export const updateProgress = mutation({
+export const updateTask = mutation({
   args: { 
     id: v.id("tasks"), 
-    subtasks: v.optional(v.array(v.object({ text: v.string(), completed: v.boolean() }))),
-    status: v.optional(v.union(v.literal("todo"), v.literal("in_progress"), v.literal("done"))),
+    updates: v.any(), 
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
-    if (updates.subtasks) {
-      const completedCount = updates.subtasks.filter(s => s.completed).length;
-      const progress = updates.subtasks.length > 0 ? (completedCount / updates.subtasks.length) * 100 : 0;
-      await ctx.db.patch(id, { ...updates, progress });
-    } else {
-      await ctx.db.patch(id, updates);
-    }
-  },
-});
-
-export const createDoubt = mutation({
-  args: {
-    taskId: v.id("tasks"),
-    sentBy: v.id("users"),
-    sentTo: v.id("users"),
-    title: v.string(),
-    message: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("doubts", {
-      ...args,
-      status: "open",
+    await ctx.db.patch(args.id, { 
+      ...args.updates, 
+      updated_at: Date.now() 
     });
   },
 });
 
-export const resolveDoubt = mutation({
-  args: { id: v.id("doubts"), response: v.string() },
+export const askQuestion = mutation({
+  args: {
+    task_id: v.id("tasks"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    directed_to: v.optional(v.array(v.id("users"))),
+    attachments: v.optional(v.array(v.string())),
+    asked_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("task_questions", {
+      ...args,
+      status: "open",
+      created_at: now,
+      updated_at: now,
+    });
+  },
+});
+
+export const respondToQuestion = mutation({
+  args: { 
+    id: v.id("task_questions"), 
+    response: v.string(),
+    responded_by: v.id("users") 
+  },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, {
       response: args.response,
+      responded_by: args.responded_by,
+      responded_at: Date.now(),
       status: "resolved",
+      updated_at: Date.now(),
     });
   },
 });
+

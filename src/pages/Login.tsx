@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const { login, magicLink } = useAuth();
@@ -17,7 +16,7 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(username, password);
+      await login(email, password);
       toast.success("Logged in successfully");
       navigate("/");
     } catch (err: any) {
@@ -54,9 +53,9 @@ export default function Login() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Input 
-                    placeholder="Username" 
-                    value={username} 
-                    onChange={(e) => setUsername(e.target.value)} 
+                    placeholder="Email Address" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
                     required 
                   />
                 </div>

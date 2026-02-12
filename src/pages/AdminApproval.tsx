@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,8 @@ export default function AdminApproval() {
   const [searchParams] = useSearchParams();
   const reqId = searchParams.get("id") as Id<"requirements">;
   const navigate = useNavigate();
-  const { approveRequirements, createTask, sendNotification, users, isLoading } = useData();
+  const { approveRequirements, updateRequirementAssignment, createTask, sendNotification, users, isLoading } = useData();
   
-  if (isLoading) {
-    return <LoadingScreen message="Loading administrative approvals..." />;
-  }
-
   const allReqs = useQuery(api.requirements.listPending);
   const currentReq = allReqs?.find(r => r._id === reqId);
 
@@ -35,20 +31,44 @@ export default function AdminApproval() {
 
   const employees = users.filter(u => u.role === "employee");
 
+  useState(() => {
+    if (currentReq?.assigned_employees) {
+      setSelectedEmployeeIds(currentReq.assigned_employees);
+    }
+  });
+
+  // Sync state when currentReq loads
+  useEffect(() => {
+    if (currentReq?.assigned_employees) {
+      setSelectedEmployeeIds(currentReq.assigned_employees);
+    }
+  }, [currentReq]);
+
+  if (isLoading || allReqs === undefined) {
+    return <LoadingScreen message="Loading administrative approvals..." />;
+  }
+
   const handleApprove = async () => {
     if (!currentReq) return;
     try {
+      // First, update assignment
+      await updateRequirementAssignment(currentReq._id, selectedEmployeeIds);
+      
+      // Then, approve
       await approveRequirements(currentReq._id, "approved");
 
+      // requirements field contains the JSON array of items
+      const items = Array.isArray(currentReq.requirements) ? currentReq.requirements : [];
+      const assigned_employees = selectedEmployeeIds;
+
       // Auto-create tasks for assigned employees
-      // For simplicity, we create one task per requirement item for ALL assigned employees
-      for (const item of currentReq.items) {
-        for (const empId of currentReq.assignedEmployeeIds) {
+      for (const item of items) {
+        for (const empId of assigned_employees) {
           await createTask({
             requirementId: currentReq._id,
             assignedEmployeeId: empId,
-            title: item.title,
-            description: item.description,
+            title: item.title || "Requirement Task",
+            description: item.description || "",
             subtasks: [],
             status: "todo",
           });
@@ -56,7 +76,7 @@ export default function AdminApproval() {
           await sendNotification({
             userId: empId,
             title: "New Task Assigned",
-            message: `You have been assigned the task: ${item.title}`,
+            message: `You have been assigned the task: ${item.title || "Requirement Task"}`,
             type: "task",
             link: "/tasks",
           });
@@ -84,6 +104,8 @@ export default function AdminApproval() {
   if (reqId && !currentReq) {
     return <div className="p-8 text-center text-muted-foreground">No pending request found for this ID.</div>;
   }
+
+  const requirementsList = Array.isArray(currentReq?.requirements) ? currentReq.requirements : [];
 
   return (
     <AppLayout title="Admin Approval">
@@ -117,7 +139,7 @@ export default function AdminApproval() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {currentReq?.items.map((item, index) => (
+                  {requirementsList.map((item: any, index: number) => (
                     <div key={index} className="flex gap-4 p-4 rounded-lg bg-secondary/30 border border-border/50">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
                         {index + 1}
@@ -131,6 +153,9 @@ export default function AdminApproval() {
                       </div>
                     </div>
                   ))}
+                  {requirementsList.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">No specific milestones listed.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -144,21 +169,41 @@ export default function AdminApproval() {
                   Assigned Team
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {currentReq?.assignedEmployeeIds.map(id => {
-                  const emp = employees.find(e => e._id === id);
-                  return (
-                    <div key={id} className="flex items-center gap-3 p-2 rounded-md bg-secondary/50">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold uppercase">
-                        {(emp?.fullname ?? "E P").split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{emp?.fullname ?? "Unknown"}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase">{emp?.role ?? "Staff"}</p>
-                      </div>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  {employees.map(e => (
+                    <Badge 
+                      key={e._id} 
+                      variant={selectedEmployeeIds.includes(e._id) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setSelectedEmployeeIds(prev => 
+                          prev.includes(e._id) ? prev.filter(id => id !== e._id) : [...prev, e._id]
+                        );
+                      }}
+                    >
+                      {e.full_name || e.fullname}
+                    </Badge>
+                  ))}
+                </div>
+                {selectedEmployeeIds.length > 0 && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] uppercase font-bold text-slate-400 mb-2">Assigned Members:</p>
+                    <div className="space-y-2">
+                      {selectedEmployeeIds.map(id => {
+                        const emp = employees.find(e => e._id === id);
+                        return (
+                          <div key={id} className="flex items-center gap-2 p-1.5 rounded-md bg-secondary/30">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold">
+                              {(emp?.full_name ?? "E P").split(" ").map(n => n[0]).join("")}
+                            </div>
+                            <span className="text-xs font-medium truncate">{emp?.full_name || "Unknown"}</span>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -1,70 +1,86 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { hashPassword } from "./auth";
 
+// List all employees
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("employees").collect();
+    return await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "employee"))
+      .collect();
   },
 });
 
+// Add a new employee
 export const add = mutation({
   args: {
     name: v.string(),
-    initials: v.string(),
-    role: v.string(),
-    department: v.string(),
     email: v.string(),
     phone: v.string(),
-    status: v.union(v.literal("active"), v.literal("away"), v.literal("offline")),
-    tasks_assigned: v.number(),
-    tasks_capacity: v.number(),
-    on_leave: v.boolean(),
-    taskList: v.array(
-      v.object({
-        id: v.string(),
-        title: v.string(),
-        status: v.string(),
-        priority: v.string(),
-        dueDate: v.optional(v.string()),
-      })
-    ),
+    role: v.string(),
+    department: v.optional(v.string()),
+    status: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("employees", args);
+    // Check if email already exists
+    const existingEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+    
+    if (existingEmail) throw new Error("Email already exists");
+
+    const hashedPassword = await hashPassword("welcome123");
+    const now = Date.now();
+    
+    // Generate a username from email
+    const username = args.email.split('@')[0];
+
+    return await ctx.db.insert("users", {
+      full_name: args.name,
+      fullname: args.name,
+      username: username,
+      email: args.email,
+      phone: args.phone,
+      role: "employee", // Enforce role
+      password: hashedPassword,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    });
   },
 });
 
+// Update an employee
 export const update = mutation({
   args: {
-    id: v.id("employees"),
-    updates: v.any(), // Using any for simplicity in updates, though v.partial is better if defined
+    id: v.id("users"),
+    updates: v.any(), 
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, args.updates);
-  },
-});
-
-export const remove = mutation({
-  args: { id: v.id("employees") },
-  handler: async (ctx, args) => {
-    await ctx.db.delete(args.id);
-  },
-});
-
-export const deleteTask = mutation({
-  args: {
-    employeeId: v.id("employees"),
-    taskId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const employee = await ctx.db.get(args.employeeId);
-    if (!employee) return;
-
-    const newTaskList = employee.taskList.filter((t) => t.id !== args.taskId);
-    await ctx.db.patch(args.employeeId, {
-      taskList: newTaskList,
-      tasks_assigned: Math.max(0, employee.tasks_assigned - 1),
+    // Allow updating fields. 
+    // Ideally we should validate 'updates' but for now relying on strict typing in other places or flexible updates.
+    // 'updates' comes from DataContext as 'any'.
+    
+    const { id, updates } = args;
+    await ctx.db.patch(id, {
+      ...updates,
+      updated_at: Date.now(),
     });
+  },
+});
+
+// Remove an employee (mark as inactive or delete)
+export const remove = mutation({
+  args: { id: v.id("users") },
+  handler: async (ctx, args) => {
+    // Permanent delete or soft delete?
+    // DataContext calls it "deleteEmployee".
+    // Let's delete for now to keep it simple, or `is_active: false`?
+    // Schema has `is_active`.
+    // Let's just delete for cleanup, or strictly follow "remove".
+    await ctx.db.delete(args.id);
   },
 });

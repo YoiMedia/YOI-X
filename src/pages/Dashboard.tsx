@@ -6,6 +6,7 @@ import { AdminDashboard } from "@/components/dashboard/AdminDashboard";
 import { SalesDashboard } from "@/components/dashboard/SalesDashboard";
 import { EmployeeDashboard } from "@/components/dashboard/EmployeeDashboard";
 import { ClientDashboard } from "@/components/dashboard/ClientDashboard";
+import { FreelancerDashboard } from "@/components/dashboard/FreelancerDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 
 const dashboardComponents: Record<string, React.FC> = {
@@ -13,6 +14,7 @@ const dashboardComponents: Record<string, React.FC> = {
   sales: SalesDashboard,
   employee: EmployeeDashboard,
   client: ClientDashboard,
+  freelancer: FreelancerDashboard,
 };
 
 export default function Dashboard() {

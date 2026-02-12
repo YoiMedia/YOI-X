@@ -57,11 +57,23 @@ const clientNavItems = [
   { title: "Schedule Call", href: "/calendar/onboarding", icon: Phone },
 ];
 
+const freelancerNavItems = [
+  { title: "Dashboard", href: "/", icon: LayoutDashboard },
+  { title: "Clients", href: "/clients", icon: Users },
+  { title: "Documents", href: "/proposals", icon: FileText },
+  { title: "Meetings", href: "/calendar", icon: Calendar },
+  { title: "Requirements", href: "/requirements", icon: ClipboardCheck },
+  { title: "Submissions Review", href: "/submissions", icon: FileBox },
+  { title: "Analytics", href: "/analytics", icon: FolderKanban },
+  { title: "Settings", href: "/settings", icon: Settings },
+];
+
 const navItemsByRole: any = {
   sales: salesNavItems,
   admin: adminNavItems,
   employee: employeeNavItems,
   client: clientNavItems,
+  freelancer: freelancerNavItems,
 };
 
 export function Sidebar() {
@@ -82,11 +94,11 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex flex-col h-screen bg-sidebar border-r border-sidebar-border transition-all duration-300",
+        "flex flex-col h-screen bg-sidebar border-r  transition-all duration-300",
         collapsed ? "w-16" : "w-64"
       )}
     >
-      <div className="flex items-center h-16 px-4 border-b border-sidebar-border">
+      <div className="flex items-center h-16 px-4  border-b">
         {!collapsed && (
           <div className="flex items-center gap-2">
             <img src="/y_logo.svg" alt="YOI MEDIA" className="h-8 w-8" />
@@ -127,7 +139,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border space-y-2">
+      <div className="p-4 border-t space-y-2">
         <button
           onClick={handleLogout}
           className={cn(

@@ -89,6 +89,8 @@ export default function CreateProposal() {
     }
   };
 
+  const selectedClient = clients.find(c => c._id === selectedClientId);
+
   return (
     <AppLayout title="Create Proposal">
       <div className="space-y-6">
@@ -122,7 +124,7 @@ export default function CreateProposal() {
                   </SelectTrigger>
                   <SelectContent>
                     {clients.map(c => (
-                      <SelectItem key={c._id} value={c._id}>{c.fullname} (@{c.username})</SelectItem>
+                      <SelectItem key={c._id} value={c._id}>{c.full_name} (@{c.username})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -239,7 +241,7 @@ export default function CreateProposal() {
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
                         <p className="font-bold text-gray-400 uppercase">Prepared For:</p>
-                        <p className="font-semibold">{clients.find(c => c._id === selectedClientId)?.fullname || "Client Name"}</p>
+                        <p className="font-semibold">{selectedClient?.full_name || "Client Name"}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-gray-400 uppercase">Date:</p>
