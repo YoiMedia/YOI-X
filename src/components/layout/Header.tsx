@@ -1,4 +1,4 @@
-import { Bell, Search, User } from "lucide-react";
+import { Bell, Search, User as UserIcon, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,12 +10,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   title: string;
 }
 
 export function Header({ title }: HeaderProps) {
+  const { user, logout } = useAuth();
+
+  const getInitials = () => {
+    if (!user) return "U";
+    const name = user.full_name || user.username || "User";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  };
+
   return (
     <header className="flex items-center justify-between h-16 px-6 bg-card border-b border-border">
       <h1 className="text-xl font-semibold text-foreground">{title}</h1>
@@ -36,22 +50,39 @@ export function Header({ title }: HeaderProps) {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-2 px-2">
+            <Button
+              variant="ghost"
+              className="gap-2 px-2 hover:bg-secondary/50"
+            >
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                  JD
+                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+                  {getInitials()}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden md:block text-sm font-medium">John Doe</span>
+              <div className="hidden md:flex flex-col items-start leading-none text-left">
+                <span className="text-sm font-medium">
+                  {user?.full_name || user?.username || "Guest User"}
+                </span>
+                <span className="text-[10px] text-muted-foreground capitalize">
+                  {user?.role || "Visitor"}
+                </span>
+              </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
+            <DropdownMenuItem className="gap-2">
+              <UserIcon size={14} /> Profile
+            </DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Log out</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={logout}
+              className="gap-2 text-destructive focus:text-destructive"
+            >
+              <LogOut size={14} /> Log out
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

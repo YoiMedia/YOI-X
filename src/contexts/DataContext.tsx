@@ -192,7 +192,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   );
 
   const convexClientsData = useQuery(api.clients.list);
-  const convexProjectsData = useQuery(api.projects.list);
+  const convexProjectsData = useQuery(
+    api.projects.listForUser,
+    user ? { userId: user._id } : "skip",
+  );
   const convexEmployeesData = useQuery(api.employees.list);
 
   const convexActivitiesData = useQuery(api.activities.list, {});
@@ -422,7 +425,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       ...p,
       id: p._id,
       name: p.name ?? "Unnamed Project",
-      client: p.client ?? "Unknown Client",
+      client: (p as any).client ?? "Unknown Client",
       status: (p.status as any) ?? "active",
       deadline: p.deadline ?? "TBD",
       value: p.value ?? "₹0",

@@ -2,267 +2,409 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // ============================================
+  // USERS - All system users (admin, sales, employee, client)
+  // ============================================
   users: defineTable({
-    full_name: v.string(),
-    fullname: v.optional(v.string()), // For legacy data support during transition
+    fullName: v.string(),
     username: v.string(),
     email: v.string(),
     phone: v.string(),
-    alternate_phone: v.optional(v.string()),
-    password: v.string(),
-    role: v.string(),
+    alternatePhone: v.optional(v.string()),
+    password: v.optional(v.string()), // null for clients using magic link
+    role: v.union(
+      v.literal("admin"),
+      v.literal("sales"),
+      v.literal("employee"),
+      v.literal("client"),
+    ),
     website: v.optional(v.string()),
-    address: v.optional(v.any()), // jsonb
-    profile_image: v.optional(v.string()),
-    is_active: v.boolean(),
-    last_login: v.optional(v.number()), // timestamptz
-    created_by: v.optional(v.id("users")), // FK
-    created_at: v.number(),
-    updated_at: v.number(),
+    address: v.optional(v.string()),
+    profileImage: v.optional(v.string()), // Cloudflare storage URL
+    isActive: v.boolean(),
+    lastLogin: v.optional(v.number()),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
     .index("by_username", ["username"])
     .index("by_email", ["email"])
     .index("by_role", ["role"])
-    .index("by_created_by", ["created_by"]),
+    .index("by_isActive", ["isActive"]),
 
+  // ============================================
+  // CLIENTS - Extended client information
+  // ============================================
   clients: defineTable({
-    user_id: v.id("users"),
-    sales_person_id: v.id("users"),
-    company_name: v.string(),
+    userId: v.id("users"), // Reference to user account
+    salesPersonId: v.id("users"), // Managing sales person
+    companyName: v.string(),
     industry: v.optional(v.string()),
-    company_size: v.optional(v.number()),
-    unique_client_id: v.string(),
-    magic_link_token: v.optional(v.string()),
-    token_expiry: v.optional(v.number()),
-    status: v.string(),
-    created_at: v.number(),
-    updated_at: v.number(),
+    companySize: v.optional(v.string()),
+    uniqueClientId: v.string(), // Custom client ID (e.g., CLI-001)
+    magicLinkToken: v.optional(v.string()),
+    tokenExpiry: v.optional(v.number()),
+    status: v.union(
+      v.literal("lead"),
+      v.literal("active"),
+      v.literal("completed"),
+      v.literal("churned"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_user_id", ["user_id"])
-    .index("by_sales_person_id", ["sales_person_id"])
+    .index("by_userId", ["userId"])
+    .index("by_salesPersonId", ["salesPersonId"])
+    .index("by_uniqueClientId", ["uniqueClientId"])
     .index("by_status", ["status"]),
 
+  // ============================================
+  // DOCUMENTS - Proposals, NDAs, Invoices
+  // ============================================
   documents: defineTable({
-    type: v.string(),
+    type: v.union(
+      v.literal("proposal"),
+      v.literal("nda"),
+      v.literal("invoice"),
+    ),
     title: v.string(),
-    document_number: v.string(),
-    created_by: v.id("users"),
-    client_id: v.id("clients"),
-    requirement_id: v.optional(v.id("requirements")),
-    content: v.any(), // jsonb
-    file_urls: v.optional(v.array(v.string())),
-    is_signed: v.optional(v.boolean()),
-    signed_at: v.optional(v.number()),
-    signed_by: v.optional(v.id("users")),
-    signature_image_url: v.optional(v.string()),
-    amount: v.optional(v.number()), // numeric
-    due_date: v.optional(v.string()), // date (string format YYYY-MM-DD)
-    valid_until: v.optional(v.string()), // date
-    status: v.string(),
-    sent_at: v.optional(v.number()),
-    viewed_at: v.optional(v.number()),
-    created_at: v.number(),
-    updated_at: v.number(),
+    documentNumber: v.string(), // e.g., PROP-001, NDA-001, INV-001
+    createdBy: v.id("users"), // Sales person
+    clientId: v.id("clients"),
+    requirementId: v.optional(v.id("requirements")),
+    content: v.string(), // JSON stringified content
+    fileUrls: v.array(v.string()), // Cloudflare URLs
+    isSigned: v.boolean(),
+    signedAt: v.optional(v.number()),
+    signedBy: v.optional(v.id("users")),
+    signatureImageUrl: v.optional(v.string()),
+    // Invoice specific fields
+    amount: v.optional(v.number()),
+    dueDate: v.optional(v.string()), // ISO date string
+    // Proposal specific fields
+    validUntil: v.optional(v.string()), // ISO date string
+    status: v.union(
+      v.literal("draft"),
+      v.literal("sent"),
+      v.literal("viewed"),
+      v.literal("signed"),
+      v.literal("expired"),
+      v.literal("cancelled"),
+    ),
+    sentAt: v.optional(v.number()),
+    viewedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_client_id", ["client_id"])
-    .index("by_created_by", ["created_by"])
+    .index("by_clientId", ["clientId"])
+    .index("by_createdBy", ["createdBy"])
     .index("by_status", ["status"])
-    .index("by_type", ["type"]),
+    .index("by_type", ["type"])
+    .index("by_requirementId", ["requirementId"]),
 
+  // ============================================
+  // MEETINGS - Calls and meetings
+  // ============================================
   meetings: defineTable({
-    type: v.string(),
+    type: v.union(
+      v.literal("onboarding"),
+      v.literal("review"),
+      v.literal("change_request"),
+      v.literal("general"),
+    ),
     title: v.string(),
     description: v.optional(v.string()),
-    scheduled_at: v.number(),
-    duration: v.optional(v.number()),
-    meeting_link: v.optional(v.string()),
-    initiated_by: v.id("users"),
-    client_id: v.id("clients"),
-    attendees: v.optional(v.array(v.id("users"))),
-    status: v.string(),
-    requirement_id: v.optional(v.id("requirements")),
-    document_id: v.optional(v.id("documents")),
-    notifications_sent: v.optional(v.boolean()),
-    reminder_sent: v.optional(v.boolean()),
-    outcome: v.optional(v.object({
-      sales_notes: v.optional(v.string()),
-      employee_notes: v.optional(v.string()),
-      client_notes: v.optional(v.string()),
-      admin_notes: v.optional(v.string()),
-      recording_url: v.optional(v.string()),
-      screenshots: v.optional(v.array(v.string())), // storage IDs
-      documents: v.optional(v.array(v.string())), // storage IDs
-      other_files: v.optional(v.array(v.string())), // storage IDs
-      next_steps: v.optional(v.string()),
-      recorded_by: v.id("users"),
-      created_at: v.number(),
-      updated_at: v.optional(v.number()),
-    })),
-    created_at: v.number(),
-    updated_at: v.number(),
+    scheduledAt: v.number(),
+    duration: v.number(), // in minutes
+    meetingLink: v.optional(v.string()),
+    initiatedBy: v.id("users"),
+    clientId: v.id("clients"),
+    attendees: v.array(v.id("users")),
+    status: v.union(
+      v.literal("scheduled"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("rescheduled"),
+    ),
+    requirementId: v.optional(v.id("requirements")),
+    documentId: v.optional(v.id("documents")),
+    notificationsSent: v.boolean(),
+    reminderSent: v.boolean(),
+    // Call outcome embedded
+    outcome: v.optional(
+      v.object({
+        salesNotes: v.optional(v.string()),
+        employeeNotes: v.optional(v.string()),
+        clientNotes: v.optional(v.string()),
+        adminNotes: v.optional(v.string()),
+        recordingUrl: v.optional(v.string()),
+        screenshots: v.array(v.string()), // Cloudflare URLs
+        documents: v.array(v.string()), // Cloudflare URLs
+        otherFiles: v.array(v.string()), // Cloudflare URLs
+        nextSteps: v.array(v.string()),
+        recordedBy: v.id("users"),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+      }),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_client_id", ["client_id"])
+    .index("by_clientId", ["clientId"])
     .index("by_status", ["status"])
-    .index("by_scheduled_at", ["scheduled_at"]),
+    .index("by_scheduledAt", ["scheduledAt"])
+    .index("by_initiatedBy", ["initiatedBy"]),
 
+  // ============================================
+  // REQUIREMENTS - Project requirements and timelines
+  // ============================================
   requirements: defineTable({
-    requirement_name: v.string(),
-    requirement_number: v.string(),
-    client_id: v.id("clients"),
-    project_id: v.optional(v.id("projects")),
-    sales_person_id: v.id("users"),
-    requirements: v.any(), // jsonb
-    start_date: v.optional(v.string()), // date
-    expected_end_date: v.optional(v.string()), // date
-    actual_end_date: v.optional(v.string()), // date
-    assigned_employees: v.optional(v.array(v.id("users"))),
-    approved_by: v.optional(v.id("users")),
-    approved_at: v.optional(v.number()),
-    status: v.string(),
-    estimated_budget: v.optional(v.number()),
-    actual_cost: v.optional(v.number()),
-    created_at: v.number(),
-    updated_at: v.number(),
+    requirementName: v.string(),
+    requirementNumber: v.string(), // e.g., REQ-2024-001
+    clientId: v.id("clients"),
+    salesPersonId: v.id("users"),
+    callOutcomeMeetingId: v.optional(v.id("meetings")), // Reference to onboarding call
+    // Requirements array structure
+    requirements: v.array(
+      v.object({
+        id: v.string(),
+        description: v.string(),
+        priority: v.union(
+          v.literal("high"),
+          v.literal("medium"),
+          v.literal("low"),
+        ),
+        estimatedHours: v.optional(v.number()),
+      }),
+    ),
+    startDate: v.string(), // ISO date string
+    expectedEndDate: v.string(), // ISO date string
+    actualEndDate: v.optional(v.string()),
+    assignedEmployees: v.array(v.id("users")),
+    approvedBy: v.optional(v.id("users")), // Admin who approved
+    approvedAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("pending_approval"),
+      v.literal("approved"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("on_hold"),
+      v.literal("cancelled"),
+    ),
+    estimatedBudget: v.optional(v.number()),
+    actualCost: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_client_id", ["client_id"])
+    .index("by_clientId", ["clientId"])
+    .index("by_salesPersonId", ["salesPersonId"])
     .index("by_status", ["status"])
-    .index("by_sales_person_id", ["sales_person_id"]),
+    .index("by_requirementNumber", ["requirementNumber"]),
 
+  // ============================================
+  // TASKS - Individual tasks within requirements
+  // ============================================
   tasks: defineTable({
-    task_number: v.string(),
+    taskNumber: v.string(), // e.g., TASK-001
     title: v.string(),
     description: v.optional(v.string()),
-    requirement_id: v.id("requirements"),
-    assigned_to: v.optional(v.id("users")),
-    created_by: v.id("users"),
-    subtasks: v.optional(v.any()), // jsonb
-    priority: v.optional(v.string()),
-    status: v.string(),
-    progress: v.number(),
-    start_date: v.optional(v.string()), // date
-    due_date: v.optional(v.string()), // date
-    completed_at: v.optional(v.number()),
-    estimated_hours: v.optional(v.number()),
-    actual_hours: v.optional(v.number()),
-    created_at: v.number(),
-    updated_at: v.number(),
+    requirementId: v.id("requirements"),
+    assignedTo: v.id("users"), // Single employee (changed from array)
+    createdBy: v.id("users"),
+    // Subtasks structure
+    subtasks: v.array(
+      v.object({
+        id: v.string(),
+        description: v.string(),
+        isCompleted: v.boolean(),
+        completedAt: v.optional(v.number()),
+        completedBy: v.optional(v.id("users")),
+      }),
+    ),
+    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+    status: v.union(
+      v.literal("todo"),
+      v.literal("in_progress"),
+      v.literal("blocked"),
+      v.literal("review"),
+      v.literal("completed"),
+    ),
+    progress: v.number(), // 0-100
+    startDate: v.optional(v.string()),
+    dueDate: v.optional(v.string()),
+    completedAt: v.optional(v.number()),
+    estimatedHours: v.optional(v.number()),
+    actualHours: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_requirement_id", ["requirement_id"])
-    .index("by_assigned_to", ["assigned_to"])
-    .index("by_status", ["status"]),
+    .index("by_requirementId", ["requirementId"])
+    .index("by_assignedTo", ["assignedTo"])
+    .index("by_status", ["status"])
+    .index("by_taskNumber", ["taskNumber"]),
 
-  task_questions: defineTable({
-    task_id: v.id("tasks"),
+  // ============================================
+  // TASK QUESTIONS - Employee doubts/questions
+  // ============================================
+  taskQuestions: defineTable({
+    taskId: v.id("tasks"),
     title: v.string(),
-    description: v.optional(v.string()),
-    priority: v.optional(v.string()),
-    asked_by: v.id("users"),
-    directed_to: v.optional(v.array(v.id("users"))), // uuid[]
-    attachments: v.optional(v.array(v.string())),
+    description: v.string(),
+    priority: v.union(
+      v.literal("urgent"),
+      v.literal("high"),
+      v.literal("normal"),
+      v.literal("low"),
+    ),
+    askedBy: v.id("users"), // Employee
+    directedTo: v.array(v.id("users")), // Client, sales, admin
+    attachments: v.array(v.string()), // Cloudflare URLs
     response: v.optional(v.string()),
-    responded_by: v.optional(v.id("users")),
-    responded_at: v.optional(v.number()),
-    status: v.string(),
-    created_at: v.number(),
-    updated_at: v.number(),
+    respondedBy: v.optional(v.id("users")),
+    respondedAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("open"),
+      v.literal("answered"),
+      v.literal("resolved"),
+      v.literal("closed"),
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_task_id", ["task_id"])
+    .index("by_taskId", ["taskId"])
+    .index("by_askedBy", ["askedBy"])
     .index("by_status", ["status"]),
 
+  // ============================================
+  // SUBMISSIONS - Work submissions by employees
+  // ============================================
   submissions: defineTable({
-    submission_number: v.string(),
-    task_id: v.id("tasks"),
-    requirement_id: v.id("requirements"),
-    submitted_by: v.id("users"),
-    client_id: v.id("clients"),
+    submissionNumber: v.string(), // e.g., SUB-2024-001
+    taskId: v.id("tasks"),
+    requirementId: v.id("requirements"),
+    submittedBy: v.id("users"), // Employee
+    clientId: v.id("clients"),
     title: v.string(),
     description: v.optional(v.string()),
-    deliverables: v.optional(v.array(v.string())),
-    status: v.string(),
-    reviewed_by: v.optional(v.id("users")),
-    reviewed_at: v.optional(v.number()),
-    review_notes: v.optional(v.string()),
-    rejection_reason: v.optional(v.string()),
-    change_request_details: v.optional(v.string()),
-    requested_changes: v.optional(v.any()), // jsonb
-    follow_up_meeting_id: v.optional(v.id("meetings")),
-    is_resubmission: v.optional(v.boolean()),
-    original_submission_id: v.optional(v.id("submissions")),
-    revision_number: v.optional(v.number()),
-    created_at: v.number(),
-    updated_at: v.number(),
+    deliverables: v.array(v.string()), // Cloudflare URLs
+    status: v.union(
+      v.literal("submitted"),
+      v.literal("under_review"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("changes_requested"),
+    ),
+    reviewedBy: v.optional(v.id("users")), // Client
+    reviewedAt: v.optional(v.number()),
+    reviewNotes: v.optional(v.string()),
+    rejectionReason: v.optional(v.string()),
+    changeRequestDetails: v.optional(v.string()),
+    requestedChanges: v.array(v.string()),
+    followUpMeetingId: v.optional(v.id("meetings")),
+    isResubmission: v.boolean(),
+    originalSubmissionId: v.optional(v.id("submissions")),
+    revisionNumber: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_task_id", ["task_id"])
-    .index("by_requirement_id", ["requirement_id"])
-    .index("by_status", ["status"]),
+    .index("by_taskId", ["taskId"])
+    .index("by_requirementId", ["requirementId"])
+    .index("by_submittedBy", ["submittedBy"])
+    .index("by_clientId", ["clientId"])
+    .index("by_status", ["status"])
+    .index("by_submissionNumber", ["submissionNumber"]),
 
+  // ============================================
+  // FEEDBACK - Client feedback on completed work
+  // ============================================
   feedback: defineTable({
-    submission_id: v.id("submissions"),
-    requirement_id: v.id("requirements"),
-    client_id: v.id("clients"),
-    overall_rating: v.optional(v.number()),
-    quality_rating: v.optional(v.number()),
-    timeliness_rating: v.optional(v.number()),
-    communication_rating: v.optional(v.number()),
-    comments: v.optional(v.string()),
-    positives: v.optional(v.array(v.string())),
-    improvements: v.optional(v.array(v.string())),
-    would_recommend: v.optional(v.boolean()),
-    testimonial_permission: v.optional(v.boolean()),
-    submitted_at: v.optional(v.number()),
-    created_at: v.number(),
+    submissionId: v.id("submissions"),
+    requirementId: v.id("requirements"),
+    clientId: v.id("clients"),
+    overallRating: v.number(), // 1-5
+    qualityRating: v.optional(v.number()),
+    timelinessRating: v.optional(v.number()),
+    communicationRating: v.optional(v.number()),
+    comments: v.string(),
+    positives: v.array(v.string()),
+    improvements: v.array(v.string()),
+    wouldRecommend: v.boolean(),
+    testimonialPermission: v.boolean(),
+    submittedAt: v.number(),
+    createdAt: v.number(),
   })
-    .index("by_submission_id", ["submission_id"])
-    .index("by_client_id", ["client_id"]),
+    .index("by_submissionId", ["submissionId"])
+    .index("by_requirementId", ["requirementId"])
+    .index("by_clientId", ["clientId"]),
 
+  // ============================================
+  // NOTIFICATIONS - System notifications
+  // ============================================
   notifications: defineTable({
-    initiated_by: v.id("users"),
-    sent_to: v.id("users"),
-    type: v.string(),
+    initiatedBy: v.optional(v.id("users")), // null for system notifications
+    sentTo: v.id("users"),
+    type: v.union(
+      v.literal("document_sent"),
+      v.literal("document_signed"),
+      v.literal("meeting_scheduled"),
+      v.literal("meeting_reminder"),
+      v.literal("task_assigned"),
+      v.literal("submission_received"),
+      v.literal("feedback_requested"),
+      v.literal("requirement_approved"),
+      v.literal("question_raised"),
+      v.literal("question_answered"),
+      v.literal("general"),
+    ),
     title: v.string(),
     message: v.string(),
-    action_url: v.optional(v.string()),
-    related_entity_type: v.optional(v.string()),
-    related_entity_id: v.optional(v.string()), // Can't be v.id because it's dynamic
-    is_read: v.boolean(),
-    read_at: v.optional(v.number()),
-    email_sent: v.optional(v.boolean()),
-    email_sent_at: v.optional(v.number()),
-    created_at: v.number(),
+    actionUrl: v.optional(v.string()), // Deep link
+    relatedEntityType: v.optional(
+      v.union(
+        v.literal("document"),
+        v.literal("meeting"),
+        v.literal("task"),
+        v.literal("submission"),
+        v.literal("requirement"),
+      ),
+    ),
+    relatedEntityId: v.optional(v.string()), // Generic ID
+    isRead: v.boolean(),
+    readAt: v.optional(v.number()),
+    emailSent: v.boolean(),
+    emailSentAt: v.optional(v.number()),
+    createdAt: v.number(),
   })
-    .index("by_sent_to", ["sent_to"])
-    .index("by_is_read", ["is_read"]),
+    .index("by_sentTo", ["sentTo"])
+    .index("by_isRead", ["isRead"])
+    .index("by_type", ["type"]),
 
-  activity_log: defineTable({
-    user_id: v.id("users"),
-    action: v.string(),
-    entity_type: v.optional(v.string()),
-    entity_id: v.optional(v.string()), // Changed to string for flexibility
-    description: v.optional(v.string()),
-    metadata: v.optional(v.any()), // jsonb
-    ip_address: v.optional(v.string()),
-    user_agent: v.optional(v.string()),
-    created_at: v.number(),
-  }).index("by_user_id", ["user_id"]),
-
-  projects: defineTable({
-    name: v.string(),
-    client_id: v.id("clients"),
-    status: v.string(),
-    deadline: v.optional(v.string()),
-    value: v.optional(v.string()),
-    description: v.optional(v.string()),
-    created_by: v.id("users"),
-    created_at: v.number(),
-    updated_at: v.number(),
+  // ============================================
+  // ACTIVITY LOG - Audit trail
+  // ============================================
+  activityLog: defineTable({
+    userId: v.id("users"),
+    action: v.string(), // e.g., "created_proposal", "signed_document"
+    entityType: v.optional(
+      v.union(
+        v.literal("user"),
+        v.literal("client"),
+        v.literal("document"),
+        v.literal("meeting"),
+        v.literal("requirement"),
+        v.literal("task"),
+        v.literal("submission"),
+      ),
+    ),
+    entityId: v.optional(v.string()),
+    description: v.string(),
+    metadata: v.optional(v.string()), // JSON stringified
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
   })
-    .index("by_client_id", ["client_id"])
-    .index("by_status", ["status"]),
-
-  superadmins: defineTable({
-    username: v.string(),
-    password: v.string(),
-    created_at: v.number(),
-  }).index("by_username", ["username"]),
+    .index("by_userId", ["userId"])
+    .index("by_entityType", ["entityType"])
+    .index("by_createdAt", ["createdAt"]),
 });
-

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { action, internalMutation, mutation, query } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 import { hashPassword } from "./auth";
 
 export const list = query({
@@ -11,20 +12,31 @@ export const list = query({
         const user = await ctx.db.get(client.user_id);
         return {
           ...client,
-          user: user ? {
-            full_name: user.full_name,
-            fullname: user.fullname,
-            email: user.email,
-            phone: user.phone,
-            website: user.website,
-            address: user.address,
-          } : null,
+          user: user
+            ? {
+                full_name: user.full_name,
+                fullname: user.fullname,
+                email: user.email,
+                phone: user.phone,
+                website: user.website,
+                address: user.address,
+              }
+            : null,
         };
-      })
+      }),
     );
   },
 });
 
+export const getByUserId = query({
+  args: { user_id: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("clients")
+      .withIndex("by_user_id", (q) => q.eq("user_id", args.user_id))
+      .first();
+  },
+});
 
 export const add = mutation({
   args: {
@@ -54,7 +66,8 @@ export const add = mutation({
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .unique();
-    if (existingEmail) throw new Error("A user with this email already exists.");
+    if (existingEmail)
+      throw new Error("A user with this email already exists.");
 
     const existingUsername = await ctx.db
       .query("users")
@@ -84,7 +97,7 @@ export const add = mutation({
 
     // 4. Create the client record
     const uniqueClientId = `CL-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
-    
+
     const clientId = await ctx.db.insert("clients", {
       user_id: userId,
       sales_person_id: args.salesPersonId,
@@ -155,3 +168,95 @@ export const update = mutation({
   },
 });
 
+export const generateMagicLink = action({
+  args: { email: v.string(), baseUrl: v.string() },
+  handler: async (ctx, args) => {
+    // 1. Find the user by email
+    const user = await ctx.runQuery(api.users.getByEmail, {
+      email: args.email,
+    });
+    if (!user) throw new Error("User not found");
+    if (user.role !== "client")
+      throw new Error("Magic links are only available for clients.");
+
+    // 2. Find the client record
+    const client = await ctx.runQuery(api.clients.getByUserId, {
+      user_id: user._id,
+    });
+    if (!client) throw new Error("Client record not found");
+
+    // 3. Generate token
+    const token =
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15);
+    const expiry = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    // 4. Save token to client record
+    await ctx.runMutation(internal.clients.setMagicLinkToken, {
+      clientId: client._id,
+      token,
+      expiry,
+    });
+
+    // 5. Call n8n webhook
+    const magicLink = `${args.baseUrl}/verify?token=${token}`;
+    const response = await fetch(
+      "https://n8n.yoimedia.fun/webhook/magic/link",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: args.email,
+          link: magicLink,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to send magic link via email");
+    }
+
+    return { success: true };
+  },
+});
+
+export const setMagicLinkToken = internalMutation({
+  args: {
+    clientId: v.id("clients"),
+    token: v.string(),
+    expiry: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.clientId, {
+      magic_link_token: args.token,
+      token_expiry: args.expiry,
+    });
+  },
+});
+
+export const verifyMagicLink = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const client = await ctx.db
+      .query("clients")
+      .withIndex("by_status") // Just a trick to get all clients efficiently or we can use filter
+      .filter((q) => q.eq(q.field("magic_link_token"), args.token))
+      .first();
+
+    if (!client) throw new Error("Invalid or expired magic link");
+    if (client.token_expiry && client.token_expiry < Date.now()) {
+      throw new Error("Magic link has expired");
+    }
+
+    // Clear the token after use
+    await ctx.db.patch(client._id, {
+      magic_link_token: undefined,
+      token_expiry: undefined,
+    });
+
+    const user = await ctx.db.get(client.user_id);
+    if (!user) throw new Error("User associated with this client not found");
+
+    return user;
+  },
+});

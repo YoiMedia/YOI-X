@@ -22,6 +22,7 @@ import type * as projects from "../projects.js";
 import type * as requirements from "../requirements.js";
 import type * as submissions from "../submissions.js";
 import type * as superadmins from "../superadmins.js";
+import type * as support from "../support.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   requirements: typeof requirements;
   submissions: typeof submissions;
   superadmins: typeof superadmins;
+  support: typeof support;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode, useState, useEffect } from "react";
-import { useMutation, useQuery } from "convex/react";
+import React, { createContext, useContext, ReactNode, useState } from "react";
+import { useMutation, useQuery, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Doc, Id } from "../../convex/_generated/dataModel";
 
@@ -10,6 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   magicLink: (email: string) => Promise<void>;
+  authWithToken: (token: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -21,8 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return saved ? (saved as Id<"users">) : null;
   });
 
-  const user = useQuery(api.users.getById, userId ? { userId: userId } : "skip");
+  const user = useQuery(
+    api.users.getById,
+    userId ? { userId: userId } : "skip",
+  );
   const loginMutation = useMutation(api.users.login);
+  const generateMagicLinkAction = useAction(api.clients.generateMagicLink);
+  const verifyMagicLinkMutation = useMutation(api.clients.verifyMagicLink);
 
   const login = async (email: string, password: string) => {
     try {
@@ -35,9 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const magicLink = async (email: string) => {
-    // Legacy system might not have had a full magic link implementation, 
-    // or it was just a mock. Restoring as a placeholder or based on previous logic.
-    throw new Error("Magic link not implemented in legacy system");
+    const baseUrl = window.location.origin;
+    await generateMagicLinkAction({ email, baseUrl });
+  };
+
+  const authWithToken = async (token: string) => {
+    const result = await verifyMagicLinkMutation({ token });
+    setUserId(result._id);
+    localStorage.setItem("yoi_userId", result._id);
   };
 
   const logout = () => {
@@ -48,13 +59,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isLoading = userId !== null && user === undefined;
 
   return (
-    <AuthContext.Provider value={{ 
-      user: user ?? null, 
-      isLoading, 
-      login, 
-      magicLink, 
-      logout 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user: user ?? null,
+        isLoading,
+        login,
+        magicLink,
+        authWithToken,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -30,7 +30,9 @@ export const listByRequirement = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("tasks")
-      .withIndex("by_requirement_id", (q) => q.eq("requirement_id", args.requirement_id))
+      .withIndex("by_requirement_id", (q) =>
+        q.eq("requirement_id", args.requirement_id),
+      )
       .collect();
   },
 });
@@ -45,6 +47,34 @@ export const listForEmployee = query({
   },
 });
 
+export const listByProject = query({
+  args: { project_id: v.id("projects") },
+  handler: async (ctx, args) => {
+    // 1. Get requirements for this project
+    // Note: iterating/filtering because no index on project_id yet
+    const requirements = await ctx.db
+      .query("requirements")
+      .filter((q) => q.eq(q.field("project_id"), args.project_id))
+      .collect();
+
+    if (requirements.length === 0) return [];
+
+    // 2. Get tasks for each requirement
+    const tasks = await Promise.all(
+      requirements.map(async (req) => {
+        return await ctx.db
+          .query("tasks")
+          .withIndex("by_requirement_id", (q) =>
+            q.eq("requirement_id", req._id),
+          )
+          .collect();
+      }),
+    );
+
+    return tasks.flat();
+  },
+});
+
 export const getById = query({
   args: { id: v.id("tasks") },
   handler: async (ctx, args) => {
@@ -53,14 +83,14 @@ export const getById = query({
 });
 
 export const updateTask = mutation({
-  args: { 
-    id: v.id("tasks"), 
-    updates: v.any(), 
+  args: {
+    id: v.id("tasks"),
+    updates: v.any(),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { 
-      ...args.updates, 
-      updated_at: Date.now() 
+    await ctx.db.patch(args.id, {
+      ...args.updates,
+      updated_at: Date.now(),
     });
   },
 });
@@ -87,10 +117,10 @@ export const askQuestion = mutation({
 });
 
 export const respondToQuestion = mutation({
-  args: { 
-    id: v.id("task_questions"), 
+  args: {
+    id: v.id("task_questions"),
     response: v.string(),
-    responded_by: v.id("users") 
+    responded_by: v.id("users"),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, {
@@ -102,4 +132,3 @@ export const respondToQuestion = mutation({
     });
   },
 });
-

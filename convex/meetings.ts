@@ -224,3 +224,45 @@ export const addOutcome = mutation({
     return meeting_id;
   },
 });
+
+export const requestMeeting = mutation({
+  args: {
+    client_id: v.id("clients"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    preferred_time: v.number(),
+    duration: v.optional(v.number()),
+    requirement_id: v.optional(v.id("requirements")),
+    initiated_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db.insert("meetings", {
+      type: "client_request",
+      title: args.title,
+      description: args.description,
+      scheduled_at: args.preferred_time,
+      duration: args.duration || 60,
+      client_id: args.client_id,
+      requirement_id: args.requirement_id,
+      initiated_by: args.initiated_by,
+      status: "requested",
+      created_at: now,
+      updated_at: now,
+    });
+  },
+});
+
+export const reschedule = mutation({
+  args: {
+    id: v.id("meetings"),
+    new_time: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      scheduled_at: args.new_time,
+      status: "rescheduled",
+      updated_at: Date.now(),
+    });
+  },
+});

@@ -2,8 +2,6 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-
-
 export const create = mutation({
   args: {
     submission_number: v.string(),
@@ -54,16 +52,26 @@ export const listPendingForClient = query({
   },
 });
 
+export const listForClient = query({
+  args: { client_id: v.id("clients") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("submissions")
+      .filter((q) => q.eq(q.field("client_id"), args.client_id))
+      .collect();
+  },
+});
+
 export const review = mutation({
-  args: { 
-    id: v.id("submissions"), 
+  args: {
+    id: v.id("submissions"),
     status: v.string(),
     review_notes: v.optional(v.string()),
     rejection_reason: v.optional(v.string()),
     reviewed_by: v.id("users"),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { 
+    await ctx.db.patch(args.id, {
       status: args.status,
       review_notes: args.review_notes,
       rejection_reason: args.rejection_reason,
@@ -74,3 +82,21 @@ export const review = mutation({
   },
 });
 
+export const requestChanges = mutation({
+  args: {
+    id: v.id("submissions"),
+    change_request_details: v.string(),
+    requested_changes: v.optional(v.any()),
+    reviewed_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      status: "changes_requested",
+      change_request_details: args.change_request_details,
+      requested_changes: args.requested_changes,
+      reviewed_by: args.reviewed_by,
+      reviewed_at: Date.now(),
+      updated_at: Date.now(),
+    });
+  },
+});

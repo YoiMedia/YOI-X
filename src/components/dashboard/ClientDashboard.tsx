@@ -1,24 +1,65 @@
 import { useState, useRef } from "react";
 import { format } from "date-fns";
-import { FolderKanban, FileText, FileSignature, Receipt, Calendar as CalendarIcon, MessageSquare, Upload, CheckCircle, Clock, X, Sparkles, Download, ExternalLink, ArrowRight } from "lucide-react";
+import {
+  FolderKanban,
+  FileText,
+  FileSignature,
+  Receipt,
+  Calendar as CalendarIcon,
+  MessageSquare,
+  Upload,
+  CheckCircle,
+  Clock,
+  X,
+  Sparkles,
+  Download,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface Project {
-  id: number;
+  id: string;
   name: string;
-  status: "in_progress" | "pending" | "completed" | "revision_requested" | "approved";
+  status:
+    | "in_progress"
+    | "pending"
+    | "completed"
+    | "revision_requested"
+    | "approved";
   progress: number;
   startDate: string;
   endDate: string;
@@ -28,71 +69,44 @@ interface Project {
   recentUpdates: { text: string; date: string }[];
 }
 
-const initialProjects: Project[] = [
-  { 
-    id: 1, 
-    name: "Website Redesign", 
-    status: "in_progress", 
-    progress: 65, 
-    startDate: "Jan 15", 
-    endDate: "Mar 30",
-    description: "Complete redesign of the company website with modern UI/UX, responsive design, and improved performance.",
-    services: ["UI/UX Design", "Frontend Development", "SEO Optimization", "Content Migration"],
-    documents: [
-      { name: "Website Redesign Proposal.pdf", type: "proposal", date: "Jan 10" },
-      { name: "Design Mockups v2.fig", type: "design", date: "Jan 28" },
-      { name: "Technical Specifications.docx", type: "document", date: "Feb 1" }
-    ],
-    recentUpdates: [
-      { text: "Homepage design completed and approved", date: "Feb 5" },
-      { text: "Mobile responsive layouts in progress", date: "Feb 3" },
-      { text: "Initial wireframes delivered", date: "Jan 25" }
-    ]
-  },
-  { 
-    id: 2, 
-    name: "Mobile App Development", 
-    status: "in_progress", 
-    progress: 40, 
-    startDate: "Feb 1", 
-    endDate: "May 15",
-    description: "Cross-platform mobile application for iOS and Android with real-time features and offline support.",
-    services: ["App Development", "API Integration", "Push Notifications", "Analytics Setup"],
-    documents: [
-      { name: "Mobile App Proposal.pdf", type: "proposal", date: "Jan 28" },
-      { name: "App Architecture.pdf", type: "document", date: "Feb 5" }
-    ],
-    recentUpdates: [
-      { text: "User authentication module completed", date: "Feb 4" },
-      { text: "Database schema finalized", date: "Feb 2" },
-      { text: "Project kickoff meeting held", date: "Feb 1" }
-    ]
-  },
-  { 
-    id: 3, 
-    name: "Marketing Campaign", 
-    status: "pending", 
-    progress: 15, 
-    startDate: "Feb 10", 
-    endDate: "Apr 20",
-    description: "Multi-channel digital marketing campaign including social media, email marketing, and PPC advertising.",
-    services: ["Social Media Management", "Email Marketing", "PPC Advertising", "Analytics & Reporting"],
-    documents: [
-      { name: "Marketing Strategy.pdf", type: "proposal", date: "Feb 8" }
-    ],
-    recentUpdates: [
-      { text: "Campaign strategy document delivered", date: "Feb 8" },
-      { text: "Initial planning phase started", date: "Feb 6" }
-    ]
-  },
-];
-
 const documents = [
-  { id: 1, type: "proposal" as const, name: "Website Redesign Proposal", date: "Jan 10, 2025", status: "accepted" as const },
-  { id: 2, type: "nda" as const, name: "Mutual Non-Disclosure Agreement", date: "Jan 12, 2025", status: "signed" as const },
-  { id: 3, type: "invoice" as const, name: "Invoice #INV-001", date: "Jan 15, 2025", status: "paid" as const, amount: "$12,500" },
-  { id: 4, type: "proposal" as const, name: "Mobile App Proposal", date: "Jan 28, 2025", status: "accepted" as const },
-  { id: 5, type: "invoice" as const, name: "Invoice #INV-002", date: "Feb 1, 2025", status: "pending" as const, amount: "$8,500" },
+  {
+    id: 1,
+    type: "proposal" as const,
+    name: "Website Redesign Proposal",
+    date: "Jan 10, 2025",
+    status: "accepted" as const,
+  },
+  {
+    id: 2,
+    type: "nda" as const,
+    name: "Mutual Non-Disclosure Agreement",
+    date: "Jan 12, 2025",
+    status: "signed" as const,
+  },
+  {
+    id: 3,
+    type: "invoice" as const,
+    name: "Invoice #INV-001",
+    date: "Jan 15, 2025",
+    status: "paid" as const,
+    amount: "$12,500",
+  },
+  {
+    id: 4,
+    type: "proposal" as const,
+    name: "Mobile App Proposal",
+    date: "Jan 28, 2025",
+    status: "accepted" as const,
+  },
+  {
+    id: 5,
+    type: "invoice" as const,
+    name: "Invoice #INV-002",
+    date: "Feb 1, 2025",
+    status: "pending" as const,
+    amount: "$8,500",
+  },
 ];
 
 const statusColors: Record<string, string> = {
@@ -113,15 +127,29 @@ const typeIcons = {
 };
 
 const timeSlots = [
-  "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
-  "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
+  "9:00 AM",
+  "9:30 AM",
+  "10:00 AM",
+  "10:30 AM",
+  "11:00 AM",
+  "11:30 AM",
+  "12:00 PM",
+  "12:30 PM",
+  "1:00 PM",
+  "1:30 PM",
+  "2:00 PM",
+  "2:30 PM",
+  "3:00 PM",
+  "3:30 PM",
+  "4:00 PM",
+  "4:30 PM",
+  "5:00 PM",
 ];
 
 // Confetti component
 function Confetti({ show }: { show: boolean }) {
   if (!show) return null;
-  
+
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       {[...Array(50)].map((_, i) => (
@@ -132,10 +160,16 @@ function Confetti({ show }: { show: boolean }) {
             left: `${Math.random() * 100}%`,
             top: "-10px",
             animationDelay: `${Math.random() * 0.5}s`,
-            backgroundColor: ['#FFD700', '#FF6B6B', '#4CAF50', '#2196F3', '#9C27B0'][Math.floor(Math.random() * 5)],
+            backgroundColor: [
+              "#FFD700",
+              "#FF6B6B",
+              "#4CAF50",
+              "#2196F3",
+              "#9C27B0",
+            ][Math.floor(Math.random() * 5)],
             width: `${Math.random() * 10 + 5}px`,
             height: `${Math.random() * 10 + 5}px`,
-            borderRadius: Math.random() > 0.5 ? '50%' : '0',
+            borderRadius: Math.random() > 0.5 ? "50%" : "0",
             transform: `rotate(${Math.random() * 360}deg)`,
           }}
         />
@@ -156,34 +190,63 @@ function Confetti({ show }: { show: boolean }) {
   );
 }
 
+import { useMemo } from "react";
 import { useData } from "@/contexts/DataContext";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
 export function ClientDashboard() {
   const { toast } = useToast();
-  const { projects: convexProjects, isLoading } = useData();
+  const { requirements, isLoading, approveRequirements } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   if (isLoading) {
     return <LoadingScreen message="Unlocking your client portal..." />;
   }
-  
-  // Projects State
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  
+
+  // Projects State derived from requirements
+  const projects: Project[] = useMemo(() => {
+    return (requirements || []).map((req: any) => ({
+      id: req._id,
+      name: req.requirement_name,
+      status: (req.status === "approved"
+        ? "approved"
+        : req.status === "in_progress"
+          ? "in_progress"
+          : req.status === "completed"
+            ? "completed"
+            : req.status === "revision_requested"
+              ? "revision_requested"
+              : "pending") as Project["status"],
+      progress:
+        req.status === "approved" ? 100 : req.status === "in_progress" ? 50 : 0,
+      startDate: req.start_date
+        ? new Date(req.start_date).toLocaleDateString()
+        : "TBD",
+      endDate: req.expected_end_date
+        ? new Date(req.expected_end_date).toLocaleDateString()
+        : "TBD",
+      description: req.description || "Project details...",
+      services: [],
+      documents: [],
+      recentUpdates: [],
+    }));
+  }, [requirements]);
+
   // Schedule Call Modal State
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [callDate, setCallDate] = useState<Date | undefined>(undefined);
   const [callTime, setCallTime] = useState("");
   const [callMessage, setCallMessage] = useState("");
-  
+
   // Request Revision Modal State
   const [isRevisionOpen, setIsRevisionOpen] = useState(false);
-  const [revisionProjectId, setRevisionProjectId] = useState<number | null>(null);
+  const [revisionProjectId, setRevisionProjectId] = useState<string | null>(
+    null,
+  );
   const [revisionComment, setRevisionComment] = useState("");
   const [revisionFiles, setRevisionFiles] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  
+
   // Confetti State
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -204,7 +267,7 @@ export function ClientDashboard() {
     }
   };
 
-  const openRevisionModal = (projectId: number, e: React.MouseEvent) => {
+  const openRevisionModal = (projectId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setRevisionProjectId(projectId);
     setIsRevisionOpen(true);
@@ -212,8 +275,8 @@ export function ClientDashboard() {
 
   const handleFileUpload = (files: FileList | null) => {
     if (files) {
-      const fileNames = Array.from(files).map(f => f.name);
-      setRevisionFiles(prev => [...prev, ...fileNames]);
+      const fileNames = Array.from(files).map((f) => f.name);
+      setRevisionFiles((prev) => [...prev, ...fileNames]);
     }
   };
 
@@ -224,50 +287,60 @@ export function ClientDashboard() {
   };
 
   const removeFile = (fileName: string) => {
-    setRevisionFiles(prev => prev.filter(f => f !== fileName));
+    setRevisionFiles((prev) => prev.filter((f) => f !== fileName));
   };
 
-  const handleSubmitRevision = () => {
+  const handleSubmitRevision = async () => {
     if (revisionProjectId && revisionComment) {
-      setProjects(prev => prev.map(p => {
-        if (p.id === revisionProjectId) {
-          const updatedProject = { ...p, status: "revision_requested" as const };
-          if (selectedProject?.id === revisionProjectId) {
-            setSelectedProject(updatedProject);
-          }
-          return updatedProject;
-        }
-        return p;
-      }));
-      setIsRevisionOpen(false);
-      toast({
-        title: "Revision requested",
-        description: "Your revision request has been submitted",
-      });
-      setRevisionComment("");
-      setRevisionFiles([]);
-      setRevisionProjectId(null);
+      try {
+        // Reuse approveRequirements but set status to revision_requested?
+        // Actually approveRequirements only accepts "approved" | "rejected" based on DataContext type
+        // I should probably use "rejected" or add "revision_requested" to the type
+        // For now, let's use "rejected" as proxy or cast if backend supports it.
+        // Backend `setStatus` accepts any string.
+        await approveRequirements(
+          revisionProjectId as any,
+          "revision_requested" as any,
+        );
+
+        setIsRevisionOpen(false);
+        toast({
+          title: "Revision requested",
+          description: "Your revision request has been submitted",
+        });
+        setRevisionComment("");
+        setRevisionFiles([]);
+        setRevisionProjectId(null);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to submit revision request",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleApproveDeliverable = (projectId: number, e: React.MouseEvent) => {
+  const handleApproveDeliverable = async (
+    projectId: string,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
-    setProjects(prev => prev.map(p => {
-      if (p.id === projectId) {
-        const updatedProject = { ...p, status: "approved" as const, progress: 100 };
-        if (selectedProject?.id === projectId) {
-          setSelectedProject(updatedProject);
-        }
-        return updatedProject;
-      }
-      return p;
-    }));
-    setShowConfetti(true);
-    toast({
-      title: "Deliverable approved! 🎉",
-      description: "Thank you for approving the project deliverables",
-    });
-    setTimeout(() => setShowConfetti(false), 3000);
+    try {
+      await approveRequirements(projectId as any, "approved");
+      setShowConfetti(true);
+      toast({
+        title: "Deliverable approved! 🎉",
+        description: "Thank you for approving the project deliverables",
+      });
+      setTimeout(() => setShowConfetti(false), 3000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve deliverable",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleProjectClick = (project: Project) => {
@@ -277,20 +350,27 @@ export function ClientDashboard() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "revision_requested": return "Revision Requested";
-      case "in_progress": return "In Progress";
-      default: return status.charAt(0).toUpperCase() + status.slice(1);
+      case "revision_requested":
+        return "Revision Requested";
+      case "in_progress":
+        return "In Progress";
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
   return (
     <div className="space-y-6">
       <Confetti show={showConfetti} />
-      
+
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">Welcome Back</h2>
-          <p className="text-muted-foreground">View your projects and documents</p>
+          <h2 className="text-2xl font-semibold text-foreground">
+            Welcome Back
+          </h2>
+          <p className="text-muted-foreground">
+            View your projects and documents
+          </p>
         </div>
         <Button onClick={() => setIsScheduleOpen(true)}>
           <CalendarIcon size={16} className="mr-2" />
@@ -307,14 +387,16 @@ export function ClientDashboard() {
         </CardHeader>
         <CardContent className="space-y-6">
           {projects.map((project) => (
-            <div 
-              key={project.id} 
+            <div
+              key={project.id}
               onClick={() => handleProjectClick(project)}
               className={cn(
                 "p-4 rounded-lg transition-all cursor-pointer group",
-                project.status === "approved" ? "bg-emerald-50 border border-emerald-200 hover:bg-emerald-100/70" :
-                project.status === "revision_requested" ? "bg-orange-50 border border-orange-200 hover:bg-orange-100/70" :
-                "bg-secondary/50 hover:bg-secondary"
+                project.status === "approved"
+                  ? "bg-emerald-50 border border-emerald-200 hover:bg-emerald-100/70"
+                  : project.status === "revision_requested"
+                    ? "bg-orange-50 border border-orange-200 hover:bg-orange-100/70"
+                    : "bg-secondary/50 hover:bg-secondary",
               )}
             >
               <div className="flex items-start justify-between mb-4">
@@ -324,24 +406,34 @@ export function ClientDashboard() {
                     {project.status === "approved" && (
                       <Sparkles size={16} className="text-emerald-500" />
                     )}
-                    <ArrowRight size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ArrowRight
+                      size={16}
+                      className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    />
                   </h3>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {project.startDate} - {project.endDate}
                   </p>
                 </div>
-                <Badge variant="outline" className={statusColors[project.status]}>
+                <Badge
+                  variant="outline"
+                  className={statusColors[project.status]}
+                >
                   {getStatusLabel(project.status)}
                 </Badge>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Project Progress</span>
-                  <span className="font-medium text-foreground">{project.progress}%</span>
+                  <span className="text-muted-foreground">
+                    Project Progress
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {project.progress}%
+                  </span>
                 </div>
                 <Progress value={project.progress} className="h-3" />
               </div>
-              
+
               {/* Action Buttons */}
               {project.status !== "approved" && (
                 <div className="flex gap-2 mt-4">
@@ -364,7 +456,7 @@ export function ClientDashboard() {
                   )}
                 </div>
               )}
-              
+
               {project.status === "approved" && (
                 <div className="mt-4 p-3 bg-emerald-100 rounded-lg flex items-center gap-2">
                   <CheckCircle size={18} className="text-emerald-600" />
@@ -387,7 +479,10 @@ export function ClientDashboard() {
             {documents.map((doc) => {
               const Icon = typeIcons[doc.type];
               return (
-                <div key={doc.id} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
+                >
                   <div className="p-2 rounded-lg bg-secondary">
                     <Icon size={16} className="text-primary" />
                   </div>
@@ -396,7 +491,9 @@ export function ClientDashboard() {
                     <p className="text-sm text-muted-foreground">{doc.date}</p>
                   </div>
                   {doc.amount && (
-                    <span className="text-sm font-medium text-foreground">{doc.amount}</span>
+                    <span className="text-sm font-medium text-foreground">
+                      {doc.amount}
+                    </span>
                   )}
                   <Badge variant="outline" className={statusColors[doc.status]}>
                     {doc.status}
@@ -420,7 +517,7 @@ export function ClientDashboard() {
               Schedule a Call
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Select Date *</Label>
@@ -430,11 +527,15 @@ export function ClientDashboard() {
                     variant="outline"
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !callDate && "text-muted-foreground"
+                      !callDate && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {callDate ? format(callDate, "PPP") : <span>Pick a date</span>}
+                    {callDate ? (
+                      format(callDate, "PPP")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -481,7 +582,10 @@ export function ClientDashboard() {
             <Button variant="outline" onClick={() => setIsScheduleOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleScheduleCall} disabled={!callDate || !callTime}>
+            <Button
+              onClick={handleScheduleCall}
+              disabled={!callDate || !callTime}
+            >
               Confirm
             </Button>
           </DialogFooter>
@@ -497,10 +601,12 @@ export function ClientDashboard() {
               Request Changes
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="revision-comment">Describe the changes needed *</Label>
+              <Label htmlFor="revision-comment">
+                Describe the changes needed *
+              </Label>
               <Textarea
                 id="revision-comment"
                 placeholder="Please provide details about the revisions you'd like..."
@@ -515,13 +621,19 @@ export function ClientDashboard() {
               <div
                 className={cn(
                   "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                  isDragging ? "border-primary bg-primary/5" : "border-border"
+                  isDragging ? "border-primary bg-primary/5" : "border-border",
                 )}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
               >
-                <Upload size={32} className="mx-auto text-muted-foreground mb-2" />
+                <Upload
+                  size={32}
+                  className="mx-auto text-muted-foreground mb-2"
+                />
                 <p className="text-sm text-muted-foreground mb-2">
                   Drag & drop files here or
                 </p>
@@ -544,7 +656,11 @@ export function ClientDashboard() {
               {revisionFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {revisionFiles.map((file, index) => (
-                    <Badge key={index} variant="secondary" className="pl-2 pr-1 py-1">
+                    <Badge
+                      key={index}
+                      variant="secondary"
+                      className="pl-2 pr-1 py-1"
+                    >
                       📎 {file}
                       <button
                         onClick={() => removeFile(file)}
@@ -560,11 +676,14 @@ export function ClientDashboard() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => {
-              setIsRevisionOpen(false);
-              setRevisionComment("");
-              setRevisionFiles([]);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRevisionOpen(false);
+                setRevisionComment("");
+                setRevisionFiles([]);
+              }}
+            >
               Cancel
             </Button>
             <Button onClick={handleSubmitRevision} disabled={!revisionComment}>
@@ -595,11 +714,18 @@ export function ClientDashboard() {
                       <Sparkles size={16} className="text-emerald-500" />
                     )}
                   </h3>
-                  <Badge className={cn("whitespace-nowrap", statusColors[selectedProject.status])}>
+                  <Badge
+                    className={cn(
+                      "whitespace-nowrap",
+                      statusColors[selectedProject.status],
+                    )}
+                  >
                     {getStatusLabel(selectedProject.status)}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">{selectedProject.description}</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {selectedProject.description}
+                </p>
               </div>
 
               {/* Timeline */}
@@ -621,10 +747,16 @@ export function ClientDashboard() {
 
               {/* Services */}
               <div>
-                <p className="text-sm font-medium mb-3">Services ({selectedProject.services.length})</p>
+                <p className="text-sm font-medium mb-3">
+                  Services ({selectedProject.services.length})
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedProject.services.map((service, index) => (
-                    <Badge key={index} variant="outline" className="bg-background">
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="bg-background"
+                    >
                       {service}
                     </Badge>
                   ))}
@@ -633,10 +765,12 @@ export function ClientDashboard() {
 
               {/* Documents */}
               <div>
-                <p className="text-sm font-medium mb-3">Documents ({selectedProject.documents.length})</p>
+                <p className="text-sm font-medium mb-3">
+                  Documents ({selectedProject.documents.length})
+                </p>
                 <div className="space-y-2">
                   {selectedProject.documents.map((doc, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex items-center justify-between p-3 rounded-lg border border-border bg-background"
                     >
@@ -646,7 +780,9 @@ export function ClientDashboard() {
                         </div>
                         <div>
                           <p className="text-sm font-medium">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">{doc.date}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {doc.date}
+                          </p>
                         </div>
                       </div>
                       <Button size="sm" variant="ghost">
@@ -662,11 +798,16 @@ export function ClientDashboard() {
                 <p className="text-sm font-medium mb-3">Recent Updates</p>
                 <div className="space-y-3">
                   {selectedProject.recentUpdates.map((update, index) => (
-                    <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50">
+                    <div
+                      key={index}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-secondary/50"
+                    >
                       <div className="mt-1 w-2 h-2 rounded-full bg-primary flex-shrink-0" />
                       <div className="flex-1">
                         <p className="text-sm text-foreground">{update.text}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{update.date}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {update.date}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -687,7 +828,9 @@ export function ClientDashboard() {
                   {selectedProject.progress >= 50 && (
                     <Button
                       className="flex-1"
-                      onClick={(e) => handleApproveDeliverable(selectedProject.id, e)}
+                      onClick={(e) =>
+                        handleApproveDeliverable(selectedProject.id, e)
+                      }
                     >
                       <CheckCircle size={14} className="mr-2" />
                       Approve
@@ -700,8 +843,12 @@ export function ClientDashboard() {
                 <div className="p-4 bg-emerald-50 rounded-lg flex items-center gap-3 border border-emerald-200">
                   <CheckCircle size={24} className="text-emerald-600" />
                   <div>
-                    <p className="font-medium text-emerald-700">Project Approved!</p>
-                    <p className="text-sm text-emerald-600">All deliverables have been accepted</p>
+                    <p className="font-medium text-emerald-700">
+                      Project Approved!
+                    </p>
+                    <p className="text-sm text-emerald-600">
+                      All deliverables have been accepted
+                    </p>
                   </div>
                 </div>
               )}

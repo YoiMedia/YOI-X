@@ -29,7 +29,7 @@ const salesNavItems = [
   { title: "Proposals", href: "/proposals", icon: FileText },
   { title: "Contracts", href: "/contracts", icon: FileSignature },
   { title: "Tasks", href: "/tasks", icon: CheckSquare },
-  { title: "Calendar", href: "/calendar", icon: Calendar },
+  { title: "Calendar", href: "/meetings", icon: Calendar },
   { title: "Employees", href: "/employees", icon: UserCog },
   { title: "Settings", href: "/settings", icon: Settings },
 ];
@@ -47,21 +47,24 @@ const adminNavItems = [
 const employeeNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "My Tasks", href: "/tasks", icon: CheckSquare },
-  { title: "Calendar", href: "/calendar", icon: Calendar },
+  { title: "Calendar", href: "/meetings", icon: Calendar },
 ];
 
 const clientNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "My Projects", href: "/portal", icon: FolderKanban },
-  { title: "Documents", href: "/contracts", icon: FileBox },
-  { title: "Schedule Call", href: "/calendar/onboarding", icon: Phone },
+  { title: "My Project", href: "/projects", icon: FolderKanban },
+  { title: "Documents", href: "/documents", icon: FileText },
+  { title: "Meetings", href: "/meetings", icon: Calendar },
+  { title: "Submissions", href: "/submissions", icon: FileSignature },
+  { title: "Feedback", href: "/feedback", icon: ClipboardCheck },
+  { title: "Support", href: "/support", icon: Phone },
 ];
 
 const freelancerNavItems = [
   { title: "Dashboard", href: "/", icon: LayoutDashboard },
   { title: "Clients", href: "/clients", icon: Users },
   { title: "Documents", href: "/proposals", icon: FileText },
-  { title: "Meetings", href: "/calendar", icon: Calendar },
+  { title: "Meetings", href: "/meetings", icon: Calendar },
   { title: "Requirements", href: "/requirements", icon: ClipboardCheck },
   { title: "Submissions Review", href: "/submissions", icon: FileBox },
   { title: "Analytics", href: "/analytics", icon: FolderKanban },
@@ -95,7 +98,7 @@ export function Sidebar() {
     <aside
       className={cn(
         "flex flex-col h-screen bg-sidebar border-r  transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-64",
       )}
     >
       <div className="flex items-center h-16 px-4  border-b">
@@ -111,7 +114,7 @@ export function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
             "p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors",
-            collapsed ? "mx-auto" : "ml-auto"
+            collapsed ? "mx-auto" : "ml-auto",
           )}
         >
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -129,7 +132,7 @@ export function Sidebar() {
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
               <item.icon size={18} className="flex-shrink-0" />
@@ -144,7 +147,7 @@ export function Sidebar() {
           onClick={handleLogout}
           className={cn(
             "flex items-center gap-3 w-full px-3 py-2 rounded-md text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
-            collapsed && "justify-center"
+            collapsed && "justify-center",
           )}
         >
           <LogOut size={18} className="flex-shrink-0" />

@@ -2,14 +2,12 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
-
-
 // List all projects
 export const list = query({
   args: {},
   handler: async (ctx) => {
     const projects = await ctx.db.query("projects").collect();
-    
+
     // Enrich projects with client names
     const enrichedProjects = await Promise.all(
       projects.map(async (project) => {
@@ -22,7 +20,7 @@ export const list = query({
           ...project,
           client: client?.company_name || "Unknown Client",
         };
-      })
+      }),
     );
 
     return enrichedProjects;
@@ -36,6 +34,47 @@ export const listByClient = query({
       .query("projects")
       .withIndex("by_client_id", (q) => q.eq("client_id", args.client_id))
       .collect();
+  },
+});
+
+export const listForUser = query({
+  args: { userId: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    const userId = args.userId;
+    if (!userId) return [];
+
+    const user = await ctx.db.get(userId);
+    if (!user) return [];
+
+    if (user.role === "client") {
+      const client = await ctx.db
+        .query("clients")
+        .withIndex("by_user_id", (q) => q.eq("user_id", userId))
+        .unique();
+
+      if (!client) return [];
+
+      return await ctx.db
+        .query("projects")
+        .withIndex("by_client_id", (q) => q.eq("client_id", client._id))
+        .collect();
+    }
+
+    // For admins/employees, return all projects (or filter as needed)
+    const projects = await ctx.db.query("projects").collect();
+
+    // Enrich with client names logic (copied from list)
+    const enrichedProjects = await Promise.all(
+      projects.map(async (project) => {
+        const client = await ctx.db.get(project.client_id);
+        return {
+          ...project,
+          client: client?.company_name || "Unknown Client",
+        };
+      }),
+    );
+
+    return enrichedProjects;
   },
 });
 

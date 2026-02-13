@@ -242,12 +242,12 @@ export default function RequirementsTimeline() {
           title: "Project Requirements Ready",
           message: `Requirements for "${requirementName}" have been prepared for your review.`,
           type: "project",
-          link: `/projects/requirements?id=${id}`,
+          link: `/requirements?id=${id}`,
         });
       }
 
       toast.success("Requirements submitted for approval");
-      navigate("/projects/requirements");
+      navigate("/requirements");
     } catch (err: any) {
       toast.error(err.message || "Failed to submit requirements");
     }

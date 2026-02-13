@@ -107,6 +107,16 @@ export const getById = query({
   },
 });
 
+export const getByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+  },
+});
+
 // For backward compatibility with the DataContext skip pattern during revert
 export const viewer = query({
   args: { userId: v.optional(v.id("users")) },
