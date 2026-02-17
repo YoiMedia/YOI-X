@@ -15,6 +15,7 @@ import RequirementsDashboard from "../pages/requirements/RequirementsDashboard";
 import NewProject from "../pages/requirements/NewProject";
 import NewRequirement from "../pages/requirements/NewRequirement";
 import MyTasks from "../pages/tasks/MyTasks";
+import QueryCenter from "../pages/tasks/QueryCenter";
 
 export const publicRoutes = {
     auth: {
@@ -77,6 +78,11 @@ export const routeConfig = {
         basePath: "my-tasks",
         allowedRoles: ["admin", "superadmin", "employee"],
         routes: [{ path: "", component: MyTasks }],
+    },
+    queries: {
+        basePath: "queries",
+        allowedRoles: ["sales", "admin", "superadmin", "employee", "client"],
+        routes: [{ path: "", component: QueryCenter }],
     },
     submissions: {
         basePath: "submissions",

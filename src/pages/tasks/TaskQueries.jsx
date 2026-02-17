@@ -328,11 +328,11 @@ function QueryChat({ query, currentUser }) {
                         <div className="flex -space-x-2">
                             {query.participants?.slice(0, 3).map((participant, i) => (
                                 <div
-                                    key={participant._id}
+                                    key={participant?._id || i}
                                     className="w-8 h-8 rounded-full bg-linear-to-br from-blue-400 to-indigo-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold"
-                                    title={participant.fullName}
+                                    title={participant?.fullName || "Participant"}
                                 >
-                                    {participant.fullName[0]}
+                                    {participant?.fullName?.[0] || "?"}
                                 </div>
                             ))}
                             {query.participants?.length > 3 && (
@@ -346,7 +346,7 @@ function QueryChat({ query, currentUser }) {
                                 {query.participants?.length} participants
                             </div>
                             <div className="text-slate-500 text-xs">
-                                {query.participants?.map(p => p.role).join(", ")}
+                                {query.participants?.map(p => p?.role).filter(Boolean).join(", ")}
                             </div>
                         </div>
                     </div>
@@ -386,7 +386,7 @@ function QueryChat({ query, currentUser }) {
                                 {!isOwnMessage && (
                                     <div className="flex items-center gap-2 px-3">
                                         <div className="w-6 h-6 rounded-full bg-linear-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold">
-                                            {message.sender?.fullName[0] || "?"}
+                                            {message.sender?.fullName?.[0] || "?"}
                                         </div>
                                         <span className="text-xs font-bold text-slate-600">
                                             {message.sender?.fullName}

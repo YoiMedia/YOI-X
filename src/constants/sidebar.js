@@ -16,6 +16,7 @@ import {
     FileSignature,
     Phone,
     UserCog,
+    MessageCircle,
 } from "lucide-react";
 
 // ==================== SUPERADMIN MENU ====================
@@ -47,6 +48,7 @@ export const superadminMenu = [
             },
         ],
     },
+    { label: "Queries", icon: MessageCircle, link: "/queries" },
     {
         label: "Settings",
         icon: Settings,
@@ -62,6 +64,7 @@ export const adminMenu = [
     { label: "Clients", icon: Users, link: "/clients" },
     { label: "Projects", icon: FolderKanban, link: "/requirements" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
+    { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Employees", icon: UserCog, link: "/employees" },
     { label: "Approvals", icon: ClipboardCheck, link: "/approvals-queue" },
     { label: "Settings", icon: Settings, link: "/settings" },
@@ -73,6 +76,7 @@ export const employeeMenu = [
     { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Projects", icon: FolderKanban, link: "/requirements?tab=projects" },
     { label: "My Tasks", icon: CheckSquare, link: "/my-tasks" },
+    { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Submissions", icon: Archive, link: "/submissions" },
 ];
 
@@ -83,6 +87,7 @@ export const salesMenu = [
     { label: "Documents", icon: FileText, link: "/proposals" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Requirements", icon: ClipboardCheck, link: "/requirements" },
+    { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Submissions Review", icon: Archive, link: "/submissions" },
     { label: "Analytics", icon: FolderKanban, link: "/analytics" },
     { label: "Settings", icon: Settings, link: "/settings" },
@@ -92,6 +97,7 @@ export const salesMenu = [
 export const clientMenu = [
     { label: "Dashboard", icon: LayoutDashboard, link: "/" },
     { label: "My Project", icon: FolderKanban, link: "/requirements" },
+    { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Documents", icon: FileText, link: "/documents" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Submissions", icon: FileSignature, link: "/submissions" },

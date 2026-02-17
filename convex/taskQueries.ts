@@ -26,6 +26,19 @@ export const getQueriesByTask = query({
                     ? await ctx.db.get(query.lastMessageBy)
                     : null;
 
+                // Enrich participants
+                const participants = await Promise.all(
+                    query.participants.map(async (userId) => {
+                        const user = await ctx.db.get(userId);
+                        return user ? {
+                            _id: user._id,
+                            fullName: user.fullName,
+                            role: user.role,
+                            profileImage: user.profileImage,
+                        } : null;
+                    })
+                );
+
                 return {
                     ...query,
                     creator: creator ? {
@@ -39,6 +52,7 @@ export const getQueriesByTask = query({
                         fullName: lastMessageSender.fullName,
                         role: lastMessageSender.role,
                     } : null,
+                    participants: participants.filter((p): p is NonNullable<typeof p> => p !== null),
                 };
             })
         );
@@ -151,11 +165,32 @@ export const getUserQueries = query({
                 query.participants.includes(args.userId)
         );
 
-        // Enrich with task and creator info
+        // Enrich with task, requirement, and creator info
         const enrichedQueries = await Promise.all(
             userQueries.map(async (query) => {
                 const task = await ctx.db.get(query.taskId);
                 const creator = await ctx.db.get(query.createdBy);
+
+                let requirementName = "Unknown Requirement";
+                if (task) {
+                    const requirement = await ctx.db.get(task.requirementId);
+                    if (requirement) {
+                        requirementName = requirement.requirementName;
+                    }
+                }
+
+                // Enrich participants
+                const participants = await Promise.all(
+                    query.participants.map(async (userId) => {
+                        const user = await ctx.db.get(userId);
+                        return user ? {
+                            _id: user._id,
+                            fullName: user.fullName,
+                            role: user.role,
+                            profileImage: user.profileImage,
+                        } : null;
+                    })
+                );
 
                 return {
                     ...query,
@@ -165,11 +200,14 @@ export const getUserQueries = query({
                         title: task.title,
                         status: task.status,
                     } : null,
+                    requirementName,
                     creator: creator ? {
                         _id: creator._id,
                         fullName: creator.fullName,
                         role: creator.role,
+                        profileImage: creator.profileImage,
                     } : null,
+                    participants: participants.filter((p): p is NonNullable<typeof p> => p !== null),
                 };
             })
         );
