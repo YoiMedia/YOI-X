@@ -16,6 +16,7 @@ import type * as meetingOutcomes from "../meetingOutcomes.js";
 import type * as meetings from "../meetings.js";
 import type * as projects from "../projects.js";
 import type * as requirements from "../requirements.js";
+import type * as taskQueries from "../taskQueries.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
 
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   meetings: typeof meetings;
   projects: typeof projects;
   requirements: typeof requirements;
+  taskQueries: typeof taskQueries;
   tasks: typeof tasks;
   users: typeof users;
 }>;

@@ -261,29 +261,82 @@ export default defineSchema({
         .index("byStartTime", ["startTime"]),
 
     // ============================================
-    // TASK QUESTIONS - Employee doubts/questions
+    // TASK QUERIES - Group chat system for task questions
     // ============================================
-    taskQuestions: defineTable({
+    taskQueries: defineTable({
+        queryNumber: v.string(), // Auto-generated unique ID
         taskId: v.id("tasks"),
         title: v.string(),
         description: v.optional(v.string()),
-        priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
-        directedTo: v.optional(v.array(v.id("users"))),
-        askedBy: v.id("users"),
-        status: v.union(v.literal("open"), v.literal("answered"), v.literal("resolved"), v.literal("closed")),
-        response: v.optional(v.string()),
-        respondedBy: v.optional(v.id("users")),
-        respondedAt: v.optional(v.number()),
+        createdBy: v.id("users"),
+        status: v.union(
+            v.literal("open"),
+            v.literal("active"),
+            v.literal("resolved"),
+            v.literal("closed")
+        ),
+        // Participants (admin, client, freelancer/employee)
+        participants: v.array(v.id("users")),
+        // Last message info for easy sorting/display
+        lastMessageAt: v.optional(v.number()),
+        lastMessageBy: v.optional(v.id("users")),
+        lastMessagePreview: v.optional(v.string()),
         // Soft delete
         isDeleted: v.optional(v.boolean()),
         deletedAt: v.optional(v.number()),
+        deletedBy: v.optional(v.id("users")),
         // Timestamps
         createdAt: v.number(),
         updatedAt: v.number(),
     })
         .index("byTaskId", ["taskId"])
         .index("byStatus", ["status"])
-        .index("byAskedBy", ["askedBy"]),
+        .index("byCreatedBy", ["createdBy"])
+        .index("byQueryNumber", ["queryNumber"])
+        .index("byLastMessageAt", ["lastMessageAt"]),
+
+    // ============================================
+    // QUERY MESSAGES - Messages within task queries
+    // ============================================
+    queryMessages: defineTable({
+        queryId: v.id("taskQueries"),
+        senderId: v.id("users"),
+        content: v.string(),
+        // Mentions (e.g., @client, @freelancer, @admin)
+        mentions: v.optional(
+            v.array(
+                v.object({
+                    userId: v.id("users"),
+                    role: v.optional(v.string()), // "client", "freelancer", "admin"
+                })
+            )
+        ),
+        // Attachments
+        attachments: v.optional(
+            v.array(
+                v.object({
+                    fileId: v.id("files"),
+                    fileName: v.string(),
+                    fileType: v.string(),
+                    fileSize: v.number(),
+                    url: v.optional(v.string()),
+                })
+            )
+        ),
+        // Message metadata
+        isEdited: v.optional(v.boolean()),
+        editedAt: v.optional(v.number()),
+        // Soft delete
+        isDeleted: v.optional(v.boolean()),
+        deletedAt: v.optional(v.number()),
+        deletedBy: v.optional(v.id("users")),
+        // Timestamps
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("byQueryId", ["queryId"])
+        .index("bySenderId", ["senderId"])
+        .index("byCreatedAt", ["queryId", "createdAt"]),
 
     // ============================================
     // SUBMISSIONS - Work submissions by employees

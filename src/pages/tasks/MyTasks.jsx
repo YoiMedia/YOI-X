@@ -14,9 +14,11 @@ import {
     MoreVertical,
     Layout,
     Briefcase,
-    ListTodo
+    ListTodo,
+    MessageCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
+import TaskQueries from "./TaskQueries";
 
 export default function MyTasks() {
     const currentUser = getUser();
@@ -29,6 +31,7 @@ export default function MyTasks() {
     const [expandedTasks, setExpandedTasks] = useState(new Set());
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [activeRequirementId, setActiveRequirementId] = useState(null);
+    const [queryTaskOpen, setQueryTaskOpen] = useState(null);
 
     const toggleRequirement = (id) => {
         const next = new Set(expandedRequirements);
@@ -74,6 +77,7 @@ export default function MyTasks() {
                         onToggle={() => toggleRequirement(req._id)}
                         expandedTasks={expandedTasks}
                         onToggleTask={toggleTask}
+                        onOpenQuery={setQueryTaskOpen}
                     />
                 ))}
 
@@ -85,11 +89,19 @@ export default function MyTasks() {
                     </div>
                 )}
             </div>
+
+            {/* Task Query Modal */}
+            {queryTaskOpen && (
+                <TaskQueries
+                    task={queryTaskOpen}
+                    onClose={() => setQueryTaskOpen(null)}
+                />
+            )}
         </div>
     );
 }
 
-function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onToggleTask }) {
+function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onToggleTask, onOpenQuery }) {
     const tasks = useQuery(api.tasks.listTasks, { requirementId: requirement._id });
     const addTask = useMutation(api.tasks.addTask);
     const currentUser = getUser();
@@ -146,8 +158,8 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
 
                 <div className="flex items-center gap-3">
                     <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${requirement.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            requirement.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                                'bg-slate-100 text-slate-600'
+                        requirement.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                            'bg-slate-100 text-slate-600'
                         }`}>
                         {requirement.status}
                     </span>
@@ -176,6 +188,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
                                 task={task}
                                 isExpanded={expandedTasks.has(task._id)}
                                 onToggle={() => onToggleTask(task._id)}
+                                onOpenQuery={onOpenQuery}
                             />
                         ))}
 
@@ -207,7 +220,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
     );
 }
 
-function TaskItem({ task, isExpanded, onToggle }) {
+function TaskItem({ task, isExpanded, onToggle, onOpenQuery }) {
     const addSubtask = useMutation(api.tasks.addSubtask);
     const toggleSubtask = useMutation(api.tasks.toggleSubtask);
     const updateStatus = useMutation(api.tasks.updateTaskStatus);
@@ -252,6 +265,17 @@ function TaskItem({ task, isExpanded, onToggle }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenQuery(task);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors"
+                        title="Raise a query about this task"
+                    >
+                        <MessageCircle size={14} />
+                        Query
+                    </button>
                     <select
                         value={task.status}
                         onChange={(e) => handleStatusChange(e.target.value)}
