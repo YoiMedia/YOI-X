@@ -309,53 +309,53 @@ export default function MeetingDetails() {
     if (!meeting) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <Loader2 className="animate-spin text-blue-600" size={40} />
+                <Loader2 className="animate-spin text-primary" size={40} />
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 fade-in">
+        <div className="space-y-6 fade-in font-secondary">
             <div className="flex items-center gap-4">
                 <button
                     onClick={() => navigate("/meetings")}
-                    className="p-3 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all shadow-sm hover:shadow hover:scale-105"
+                    className="p-3 rounded-2xl bg-card-bg border border-border-accent text-text-secondary hover:bg-alt-bg transition-all shadow-sm hover:shadow hover:scale-105"
                 >
                     <ArrowLeft size={20} />
                 </button>
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">{meeting.title}</h1>
-                    <p className="text-slate-500 font-medium mt-1">{meeting.companyName}</p>
+                    <h1 className="text-4xl font-black text-secondary tracking-tight font-primary">{meeting.title}</h1>
+                    <p className="text-text-secondary font-black uppercase tracking-widest text-[10px] mt-1">{meeting.companyName}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Meeting Details */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-gradient-to-br from-white via-slate-50/30 to-white border border-slate-200 p-8 rounded-[2rem] shadow-lg space-y-8">
+                    <div className="bg-card-bg border border-border-accent p-8 rounded-[2.5rem] shadow-sm space-y-8">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Meeting Info</h2>
+                            <h2 className="text-xl font-black text-secondary uppercase tracking-widest font-primary">Meeting Overview</h2>
                             {!editMode ? (
                                 (currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'client' || meeting.organizer === currentUser.id) && (
                                     <button
                                         onClick={() => setEditMode(true)}
-                                        className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                                        className="bg-secondary text-white px-6 py-2.5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-secondary/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >
-                                        Edit Details
+                                        Edit Briefing
                                     </button>
                                 )
                             ) : (
                                 <div className="flex gap-3">
-                                    <button onClick={() => setEditMode(false)} className="font-bold px-5 py-2.5 rounded-2xl bg-white border-2 border-slate-200 hover:bg-slate-50">
+                                    <button onClick={() => setEditMode(false)} className="font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-2xl bg-card-bg border border-border-accent hover:bg-alt-bg transition-colors">
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleSaveMeetingDetails}
                                         disabled={loading}
-                                        className="font-bold px-6 py-2.5 rounded-2xl bg-green-600 text-white flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                                        className="font-black text-[10px] uppercase tracking-widest px-6 py-2.5 rounded-2xl bg-success text-white flex items-center gap-2 hover:bg-success/90 disabled:opacity-50 shadow-lg shadow-success/10"
                                     >
-                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                        Save Changes
+                                        {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                        Commit Changes
                                     </button>
                                 </div>
                             )}
@@ -363,94 +363,94 @@ export default function MeetingDetails() {
 
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Calendar size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">Date</span>
+                                <div className="flex items-center gap-2 text-text-secondary/40">
+                                    <Calendar size={14} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Strategic Date</span>
                                 </div>
-                                <p className="font-black text-slate-900">{new Date(meeting.scheduledAt).toLocaleDateString()}</p>
+                                <p className="font-black text-secondary">{new Date(meeting.scheduledAt).toLocaleDateString()}</p>
                             </div>
                             <div className="space-y-2">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Clock size={16} />
-                                    <span className="text-xs font-bold uppercase tracking-wider">Time</span>
+                                <div className="flex items-center gap-2 text-text-secondary/40">
+                                    <Clock size={14} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Timezone Slot</span>
                                 </div>
-                                <p className="font-black text-slate-900">{new Date(meeting.scheduledAt).toLocaleTimeString()}</p>
+                                <p className="font-black text-secondary">{new Date(meeting.scheduledAt).toLocaleTimeString()}</p>
                             </div>
                         </div>
 
                         {editMode ? (
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Title</label>
+                                    <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Technical Title</label>
                                     <input
                                         type="text"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
-                                        className="w-full p-4 rounded-2xl border border-slate-200"
+                                        className="w-full p-4 rounded-2xl border border-border-accent bg-card-bg font-bold text-secondary focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                                    <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Executive Summary</label>
                                     <textarea
                                         value={description}
                                         onChange={(e) => setDescription(e.target.value)}
                                         rows="3"
-                                        className="w-full p-4 rounded-2xl border border-slate-200"
+                                        className="w-full p-4 rounded-2xl border border-border-accent bg-card-bg font-bold text-secondary focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                                    <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Progress Status</label>
                                     <select
                                         value={status}
                                         onChange={(e) => setStatus(e.target.value)}
-                                        className="w-full p-4 rounded-2xl border border-slate-200 bg-white font-bold text-sm"
+                                        className="w-full p-4 rounded-2xl border border-border-accent bg-card-bg font-bold text-sm text-secondary focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all cursor-pointer"
                                     >
-                                        <option value="scheduled">Scheduled</option>
-                                        <option value="in-progress">In Progress</option>
-                                        <option value="completed">Completed</option>
-                                        <option value="cancelled">Cancelled</option>
-                                        <option value="no-show">No Show</option>
+                                        <option value="scheduled">Planned Briefing</option>
+                                        <option value="in-progress">Sync Active</option>
+                                        <option value="completed">Asset Released</option>
+                                        <option value="cancelled">Declined</option>
+                                        <option value="no-show">No Response</option>
                                     </select>
                                 </div>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {meeting.description && <p className="text-slate-600 font-medium">{meeting.description}</p>}
+                                {meeting.description && <p className="text-text-secondary font-bold leading-relaxed">{meeting.description}</p>}
                             </div>
                         )}
                     </div>
 
                     {/* My Outcome Section */}
-                    <div className="bg-gradient-to-br from-white via-blue-50/20 to-white border-2 border-blue-100 p-8 rounded-[2rem] shadow-lg space-y-6">
+                    <div className="bg-header-bg/30 border border-primary/20 p-8 rounded-[2.5rem] shadow-sm space-y-6">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-blue-100 rounded-xl">
-                                    <Lock size={20} className="text-blue-600" />
+                                <div className="p-2 bg-primary text-white rounded-xl shadow-lg shadow-primary/20">
+                                    <Lock size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">My Notes</h2>
-                                    <p className="text-xs text-slate-500 font-medium">Only visible to you</p>
+                                    <h2 className="text-xl font-black text-secondary uppercase tracking-widest font-primary">Encrypted Briefing</h2>
+                                    <p className="text-[10px] text-text-secondary/60 font-black uppercase tracking-widest">Confidential Internal Metadata</p>
                                 </div>
                             </div>
                             {!outcomeEditMode ? (
                                 <button
                                     onClick={() => setOutcomeEditMode(true)}
-                                    className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                                    className="bg-primary text-white px-6 py-2.5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                                 >
-                                    {myOutcome ? "Edit Note" : "Add Note"}
+                                    {myOutcome ? "Edit Records" : "Initialize Notes"}
                                 </button>
                             ) : (
                                 <div className="flex gap-3">
-                                    <button onClick={() => { setOutcomeEditMode(false); resetOutcomeForm(); }} className="font-bold px-5 py-2.5 rounded-2xl bg-white border-2 border-slate-200 hover:bg-slate-50">
+                                    <button onClick={() => { setOutcomeEditMode(false); resetOutcomeForm(); }} className="font-black text-[10px] uppercase tracking-widest px-5 py-2.5 rounded-2xl bg-card-bg border border-border-accent hover:bg-alt-bg transition-colors">
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleSaveOutcome}
                                         disabled={loading}
-                                        className="font-bold px-6 py-2.5 rounded-2xl bg-green-600 text-white flex items-center gap-2 hover:bg-green-700 disabled:opacity-50"
+                                        className="font-black text-[10px] uppercase tracking-widest px-6 py-2.5 rounded-2xl bg-success text-white flex items-center gap-2 hover:bg-success/90 disabled:opacity-50 shadow-lg shadow-success/10"
                                     >
-                                        {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                                        Save Note
+                                        {loading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                        Save Insight
                                     </button>
                                 </div>
                             )}
@@ -463,61 +463,61 @@ export default function MeetingDetails() {
                                         type="checkbox"
                                         checked={!outcomeIsPrivate}
                                         onChange={(e) => setOutcomeIsPrivate(!e.target.checked)}
-                                        className="w-5 h-5 rounded"
+                                        className="w-5 h-5 rounded accent-primary"
                                     />
-                                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                        <Globe size={16} />
-                                        Share this note with all meeting participants
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-text-secondary flex items-center gap-2">
+                                        <Globe size={14} className="text-primary" />
+                                        Distribute briefing to all mission participants
                                     </label>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sentiment</label>
+                                    <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Strategic Sentiment</label>
                                     <select
                                         value={outcomeSentiment}
                                         onChange={(e) => setOutcomeSentiment(e.target.value)}
-                                        className="w-full p-4 rounded-2xl border border-slate-200 bg-white font-bold text-sm"
+                                        className="w-full p-4 rounded-2xl border border-border-accent bg-card-bg font-bold text-sm text-secondary focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all cursor-pointer"
                                     >
-                                        <option value="positive">Positive & Progressive</option>
-                                        <option value="neutral">Neutral / Standard</option>
-                                        <option value="negative">Negative / Requires Attention</option>
+                                        <option value="positive">High Velocity / Progressive</option>
+                                        <option value="neutral">Strategic Alignment</option>
+                                        <option value="negative">Risk Detected / Awaiting Resync</option>
                                     </select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Summary</label>
+                                    <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Briefing Summary</label>
                                     <textarea
                                         value={outcomeSummary}
                                         onChange={(e) => setOutcomeSummary(e.target.value)}
                                         rows="4"
-                                        className="w-full p-4 rounded-2xl border border-slate-200"
-                                        placeholder="Summarize the key takeaways..."
+                                        className="w-full p-4 rounded-2xl border border-border-accent bg-card-bg font-bold text-secondary focus:border-primary/30 focus:ring-4 focus:ring-primary/5 outline-none transition-all"
+                                        placeholder="Document major takeaways and technical breakthroughs..."
                                     />
                                 </div>
 
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Action Items</label>
-                                        <button onClick={addActionItem} className="text-blue-600 font-bold text-xs flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-xl hover:bg-blue-100">
-                                            <Plus size={14} /> Add Action
+                                        <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Tactical Pipeline</label>
+                                        <button onClick={addActionItem} className="text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-1.5 bg-card-bg border border-primary/10 px-4 py-2 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm">
+                                            <Plus size={14} /> New Objective
                                         </button>
                                     </div>
                                     <div className="space-y-3">
                                         {outcomeActionItems?.map((item) => (
-                                            <div key={item.id} className="flex gap-3 bg-white p-3 rounded-2xl border border-slate-100 items-start group">
+                                            <div key={item.id} className="flex gap-3 bg-card-bg p-3 rounded-2xl border border-border-accent items-start group transition-all hover:border-primary/20">
                                                 <button
                                                     onClick={() => toggleActionItem(item.id)}
-                                                    className={`mt-1 p-1 rounded-lg border transition-colors ${item.completed ? 'bg-green-600 border-green-600 text-white' : 'border-slate-200 text-transparent hover:border-blue-400'}`}
+                                                    className={`mt-1 p-1 rounded-lg border transition-colors ${item.completed ? 'bg-success border-success text-white' : 'border-border-accent text-transparent hover:border-primary/40'}`}
                                                 >
                                                     <CheckCircle2 size={14} />
                                                 </button>
                                                 <input
                                                     value={item.description}
                                                     onChange={(e) => updateActionItem(item.id, e.target.value)}
-                                                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold ${item.completed ? 'line-through text-slate-400' : 'text-slate-700'}`}
-                                                    placeholder="Task description..."
+                                                    className={`flex-1 bg-transparent border-none focus:ring-0 text-sm font-bold ${item.completed ? 'line-through text-text-secondary/40' : 'text-secondary'}`}
+                                                    placeholder="Define objective..."
                                                 />
-                                                <button onClick={() => removeActionItem(item.id)} className="opacity-0 group-hover:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all">
+                                                <button onClick={() => removeActionItem(item.id)} className="opacity-0 group-hover:opacity-100 p-1 text-text-secondary/20 hover:text-error transition-all">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -528,21 +528,21 @@ export default function MeetingDetails() {
                         ) : myOutcome ? (
                             <div className="space-y-6">
                                 <div className="flex items-center gap-3">
-                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${myOutcome.sentiment === 'positive' ? 'bg-green-100 text-green-700' : myOutcome.sentiment === 'negative' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${myOutcome.sentiment === 'positive' ? 'bg-success/10 text-success' : myOutcome.sentiment === 'negative' ? 'bg-error/10 text-error' : 'bg-alt-bg text-text-secondary'}`}>
                                         {myOutcome.sentiment}
                                     </span>
-                                    {!myOutcome.isPrivate && <span className="text-xs text-blue-600 font-bold flex items-center gap-1"><Globe size={12} /> Shared</span>}
+                                    {!myOutcome.isPrivate && <span className="text-[10px] text-primary font-black flex items-center gap-1 uppercase tracking-widest"><Globe size={12} /> Sync Enabled</span>}
                                 </div>
-                                <p className="text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">{myOutcome.summary}</p>
+                                <p className="text-secondary leading-relaxed font-bold whitespace-pre-wrap text-sm">{myOutcome.summary}</p>
                                 {myOutcome.actionItems?.length > 0 && (
                                     <div className="space-y-3">
-                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">My Action Items</h4>
+                                        <h4 className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">Tactical Pipeline</h4>
                                         {myOutcome.actionItems.map(item => (
                                             <div key={item.id} className="flex gap-3 items-start">
-                                                <div className={`mt-1 h-5 w-5 rounded-lg border-2 shrink-0 flex items-center justify-center ${item.completed ? 'bg-green-600 border-green-600 text-white' : 'border-slate-200'}`}>
+                                                <div className={`mt-1 h-5 w-5 rounded-lg border flex items-center justify-center ${item.completed ? 'bg-success border-success text-white' : 'border-border-accent'}`}>
                                                     {item.completed && <CheckCircle2 size={12} />}
                                                 </div>
-                                                <span className={`font-medium text-sm ${item.completed ? 'text-slate-300 line-through' : 'text-slate-700'}`}>
+                                                <span className={`font-bold text-sm ${item.completed ? 'text-text-secondary/30 line-through' : 'text-secondary'}`}>
                                                     {item.description}
                                                 </span>
                                             </div>
@@ -552,42 +552,42 @@ export default function MeetingDetails() {
                                 <OutcomeFiles outcomeId={myOutcome._id} isEditable={true} />
                             </div>
                         ) : (
-                            <div className="text-center py-12 text-slate-400">
+                            <div className="text-center py-12 text-text-secondary/20">
                                 <FileText size={40} className="mx-auto mb-3 opacity-30" />
-                                <p className="font-medium">No notes yet. Add your meeting summary here.</p>
+                                <p className="font-black uppercase tracking-widest text-[10px]">No briefing records detected.</p>
                             </div>
                         )}
                     </div>
 
                     {/* Shared Outcomes */}
                     {sharedOutcomes.length > 0 && (
-                        <div className="bg-gradient-to-br from-white via-green-50/20 to-white border-2 border-green-100 p-8 rounded-[2rem] shadow-lg space-y-6">
+                        <div className="bg-success/5 border border-success/20 p-8 rounded-[2.5rem] shadow-sm space-y-6">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-100 rounded-xl">
-                                    <Globe size={20} className="text-green-600" />
+                                <div className="p-2 bg-success text-white rounded-xl shadow-lg shadow-success/20">
+                                    <Globe size={20} />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Shared Notes</h2>
-                                    <p className="text-xs text-slate-500 font-medium">From other participants</p>
+                                    <h2 className="text-xl font-black text-secondary uppercase tracking-widest font-primary">Global Synced Records</h2>
+                                    <p className="text-[10px] text-text-secondary/60 font-black uppercase tracking-widest">Metadata From Participants</p>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 {sharedOutcomes.map(outcome => (
-                                    <div key={outcome._id} className="bg-white border border-green-100 p-6 rounded-2xl space-y-3">
+                                    <div key={outcome._id} className="bg-card-bg border border-border-accent p-6 rounded-[2rem] space-y-3 transition-all hover:border-success/30">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{outcome.role}</span>
-                                            <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${outcome.sentiment === 'positive' ? 'bg-green-100 text-green-700' : outcome.sentiment === 'negative' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>
+                                            <span className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">{outcome.role} Brief</span>
+                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${outcome.sentiment === 'positive' ? 'bg-success/10 text-success' : outcome.sentiment === 'negative' ? 'bg-error/10 text-error' : 'bg-alt-bg text-text-secondary'}`}>
                                                 {outcome.sentiment}
                                             </span>
                                         </div>
-                                        <p className="text-slate-700 font-medium whitespace-pre-wrap">{outcome.summary}</p>
+                                        <p className="text-secondary font-bold text-sm whitespace-pre-wrap leading-relaxed">{outcome.summary}</p>
                                         {outcome.actionItems?.length > 0 && (
-                                            <div className="space-y-2 pt-2 border-t border-green-50">
-                                                <h5 className="text-xs font-bold text-slate-400 uppercase">Action Items</h5>
+                                            <div className="space-y-2 pt-4 border-t border-border-accent/10">
+                                                <h5 className="text-[10px] font-black text-text-secondary/20 uppercase tracking-widest">Tactical Pipe</h5>
                                                 {outcome.actionItems.map(item => (
-                                                    <div key={item.id} className="flex items-center gap-2 text-sm">
-                                                        <CheckCircle2 size={14} className={item.completed ? 'text-green-600' : 'text-slate-300'} />
-                                                        <span className={item.completed ? 'line-through text-slate-400' : 'text-slate-600'}>{item.description}</span>
+                                                    <div key={item.id} className="flex items-center gap-2 text-xs font-bold text-secondary">
+                                                        <CheckCircle2 size={14} className={item.completed ? 'text-success' : 'text-text-secondary/20'} />
+                                                        <span className={item.completed ? 'line-through text-text-secondary/30' : ''}>{item.description}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -603,19 +603,19 @@ export default function MeetingDetails() {
                 {/* Sidebar */}
                 <div className="space-y-6">
                     {/* Attendees */}
-                    <div className="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm space-y-4">
-                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                            <UsersIcon size={18} className="text-blue-600" /> Attendees
+                    <div className="bg-card-bg border border-border-accent p-6 rounded-[2.5rem] shadow-sm space-y-6">
+                        <h3 className="text-[10px] font-black text-secondary flex items-center gap-2 uppercase tracking-[0.2em] font-primary">
+                            <UsersIcon size={16} className="text-primary" /> Active Personnel
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                             {meeting.attendeesWithDetails?.map((attendee) => (
-                                <div key={attendee.userId} className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-black text-sm">
+                                <div key={attendee.userId} className="flex items-center gap-3 group">
+                                    <div className="w-10 h-10 rounded-2xl bg-header-bg flex items-center justify-center text-primary font-black text-sm border border-primary/10 transition-transform group-hover:scale-110">
                                         {attendee.name?.charAt(0)}
                                     </div>
                                     <div className="flex-1">
-                                        <p className="font-bold text-slate-900 text-sm">{attendee.name}</p>
-                                        <p className="text-xs text-slate-500 font-medium">{attendee.role}</p>
+                                        <p className="font-black text-secondary text-sm tracking-tight">{attendee.name}</p>
+                                        <p className="text-[9px] text-text-secondary/40 font-black uppercase tracking-widest">{attendee.role}</p>
                                     </div>
                                 </div>
                             ))}
@@ -623,37 +623,37 @@ export default function MeetingDetails() {
                     </div>
 
                     {/* Files */}
-                    <div className="bg-white border border-slate-200 p-6 rounded-[2rem] shadow-sm space-y-4">
+                    <div className="bg-card-bg border border-border-accent p-6 rounded-[2.5rem] shadow-sm space-y-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                                <FileIcon size={18} className="text-purple-600" /> Files
+                            <h3 className="text-[10px] font-black text-secondary flex items-center gap-2 uppercase tracking-[0.2em] font-primary">
+                                <FileIcon size={16} className="text-primary" /> Assets
                             </h3>
                             <label className="cursor-pointer">
                                 <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
-                                <div className="text-blue-600 font-bold text-xs flex items-center gap-1 bg-blue-50 px-3 py-1.5 rounded-xl hover:bg-blue-100">
-                                    {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-                                    Upload
+                                <div className="text-primary font-black text-[9px] uppercase tracking-widest flex items-center gap-1.5 bg-header-bg px-4 py-2 rounded-xl hover:bg-primary hover:text-white transition-all shadow-sm border border-primary/10">
+                                    {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                                    Deploy
                                 </div>
                             </label>
                         </div>
                         <div className="space-y-2">
                             {files?.map((file) => (
-                                <div key={file._id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl group">
-                                    <div className="flex items-center gap-2 flex-1">
-                                        <FileIcon size={16} className="text-slate-400" />
-                                        <span className="text-sm font-medium text-slate-700 truncate">{file.fileName}</span>
+                                <div key={file._id} className="flex items-center justify-between p-3 bg-alt-bg/30 rounded-2xl group border border-transparent hover:border-primary/10 hover:bg-card-bg transition-all">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <FileIcon size={14} className="text-text-secondary/40" />
+                                        <span className="text-[11px] font-black text-secondary truncate uppercase tracking-tight">{file.fileName}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleDownloadFile(file.storageKey, file.fileName)} className="opacity-0 group-hover:opacity-100 text-blue-600 hover:text-blue-700">
+                                        <button onClick={() => handleDownloadFile(file.storageKey, file.fileName)} className="opacity-0 group-hover:opacity-100 text-primary hover:scale-110 transition-all">
                                             <ExternalLink size={14} />
                                         </button>
-                                        <button onClick={() => handleDeleteFile(file._id)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600">
+                                        <button onClick={() => handleDeleteFile(file._id)} className="opacity-0 group-hover:opacity-100 text-error hover:scale-110 transition-all">
                                             <Trash2 size={14} />
                                         </button>
                                     </div>
                                 </div>
                             ))}
-                            {!files?.length && <p className="text-sm text-slate-400 text-center py-4">No files yet</p>}
+                            {!files?.length && <p className="text-[9px] text-text-secondary/20 font-black uppercase tracking-widest text-center py-6">No assets uploaded.</p>}
                         </div>
                     </div>
                 </div>
