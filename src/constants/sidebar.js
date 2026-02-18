@@ -17,6 +17,7 @@ import {
     Phone,
     UserCog,
     MessageCircle,
+    Headset,
 } from "lucide-react";
 
 // ==================== SUPERADMIN MENU ====================
@@ -73,6 +74,8 @@ export const adminMenu = [
     { label: "Employees", icon: UserCog, link: "/employees" },
     { label: "Approvals", icon: ClipboardCheck, link: "/approvals-queue" },
     { label: "Settings", icon: Settings, link: "/settings" },
+    { label: "Leads", icon: Headset, link: "/leads" },
+
 ];
 
 // ==================== EMPLOYEE MENU ====================

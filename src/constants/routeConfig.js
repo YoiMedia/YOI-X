@@ -19,6 +19,7 @@ import QueryCenter from "../pages/tasks/QueryCenter";
 import Submissions from "../pages/submissions/Submissions";
 import SubmissionDetails from "../pages/submissions/SubmissionDetails";
 import FeedbackPage from "../pages/feedback/FeedbackPage";
+import Leads from "../pages/leads/Leads";
 
 export const publicRoutes = {
     auth: {
@@ -36,6 +37,13 @@ export const routeConfig = {
     dashboard: {
         basePath: "",
         routes: [{ path: "", component: Dashboard }],
+    },
+    leads: {
+        basePath: "leads",
+        allowedRoles: ["superadmin", "admin"],
+        routes: [
+            { path: "", component: Leads },
+        ],
     },
     users: {
         basePath: "users",
