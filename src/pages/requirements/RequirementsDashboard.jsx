@@ -60,18 +60,18 @@ export default function RequirementsDashboard() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Requirements Hub</h1>
-                    <p className="text-slate-500 text-lg font-medium mt-1">Manage Detailed Requirements & Tasks.</p>
+                    <h1 className="text-4xl font-black text-secondary tracking-tight font-primary">Requirements Hub</h1>
+                    <p className="text-text-secondary text-[10px] font-black uppercase tracking-widest mt-1">Manage Detailed Requirements & Technical Tasks.</p>
                 </div>
 
                 {(currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
                     <div className="flex gap-3">
                         <button
                             onClick={() => navigate("/requirements/new-requirement")}
-                            className="bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-slate-200 hover:scale-105 transition-all"
+                            className="bg-secondary text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-secondary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
-                            <Plus size={18} />
-                            Add Requirement
+                            <Plus size={16} />
+                            Create Specification
                         </button>
                     </div>
                 )}
@@ -80,13 +80,13 @@ export default function RequirementsDashboard() {
             {/* Content Area */}
             <div className="space-y-6">
                 {/* Search */}
-                <div className="relative">
-                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="relative font-secondary">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
                     <input
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search requirements or clients..."
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 bg-white shadow-xs"
+                        placeholder="Search specifications or client records..."
+                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-border-accent focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/30 bg-card-bg shadow-sm text-secondary font-bold text-sm placeholder:text-text-secondary/20"
                     />
                 </div>
 
@@ -110,12 +110,12 @@ export default function RequirementsDashboard() {
                         }, {});
 
                         return Object.entries(grouped || {}).map(([clientName, reqs]) => (
-                            <div key={clientName} className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
-                                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                    <Users size={20} className="text-blue-500" />
+                            <div key={clientName} className="bg-alt-bg/40 rounded-[2rem] p-6 border border-border-accent shadow-sm font-secondary">
+                                <h3 className="text-lg font-black text-secondary mb-4 flex items-center gap-2 font-primary uppercase tracking-tight">
+                                    <Users size={20} className="text-primary" />
                                     {clientName}
-                                    <span className="text-xs font-medium text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100">
-                                        {reqs.length} Req{reqs.length !== 1 && 's'}
+                                    <span className="text-[10px] font-black text-text-secondary/40 bg-card-bg px-2 py-1 rounded-lg border border-border-accent/50 uppercase tracking-widest">
+                                        {reqs.length} Portfolio {reqs.length !== 1 ? 'Items' : 'Item'}
                                     </span>
                                 </h3>
 
@@ -238,21 +238,21 @@ function RequirementItem({ req, currentUser, navigate, setAssignmentModal }) {
     const requestRequirement = useMutation(api.requirements.requestRequirementAssignment);
 
     return (
-        <div className={`bg-white rounded-2xl border border-slate-200 transition-all ${isExpanded ? 'shadow-lg border-blue-200' : 'hover:border-blue-300'}`}>
+        <div className={`bg-card-bg rounded-2xl border transition-all font-secondary ${isExpanded ? 'shadow-xl border-primary/20 scale-[1.01]' : 'border-border-accent hover:border-primary/30'}`}>
             <div
                 className="p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer group"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex items-center gap-4 flex-1">
-                    <div className={`w-2 h-2 rounded-full ${req.status === 'approved' ? 'bg-green-500' :
-                        req.status === 'draft' ? 'bg-slate-300' : 'bg-blue-500'
+                    <div className={`w-2 h-2 rounded-full ${req.status === 'approved' ? 'bg-success shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                        req.status === 'draft' ? 'bg-text-secondary/30' : 'bg-primary shadow-[0_0_8px_rgba(241,90,36,0.5)]'
                         }`}></div>
                     <div>
-                        <div className="font-bold text-slate-700 group-hover:text-blue-700 transition-colors flex items-center gap-2">
+                        <div className="font-black text-secondary group-hover:text-primary transition-colors flex items-center gap-2 text-sm uppercase tracking-tight">
                             {req.requirementName}
                             {tasks && tasks.length > 0 && (
-                                <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-black uppercase">
-                                    {tasks.length} {tasks.length === 1 ? 'Task' : 'Tasks'}
+                                <span className="text-[9px] bg-header-bg text-primary px-1.5 py-0.5 rounded font-black uppercase tracking-widest border border-primary/20">
+                                    {tasks.length} {tasks.length === 1 ? 'Objective' : 'Objectives'}
                                 </span>
                             )}
                         </div>
@@ -386,7 +386,7 @@ function RequirementItem({ req, currentUser, navigate, setAssignmentModal }) {
                 <div className="px-12 pb-6 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="border-t border-slate-50 pt-4 mb-4">
                         <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Implementation Progress</h4>
-                        <div className="grid gap-3">
+                        <div className="grid gap-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-2 pb-2">
                             {tasks.map(task => (
                                 <div key={task._id} className="bg-slate-50/50 p-3 rounded-xl border border-slate-100">
                                     <div className="flex items-center justify-between mb-2">

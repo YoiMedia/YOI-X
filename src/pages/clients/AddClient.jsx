@@ -97,17 +97,17 @@ export default function AddClient() {
             <div className="flex items-center justify-between">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center text-slate-500 hover:text-slate-800 transition-colors font-medium group"
+                    className="flex items-center text-text-secondary hover:text-secondary transition-colors font-black uppercase tracking-widest text-[10px] group"
                 >
-                    <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-                    Back
+                    <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+                    Back to Directory
                 </button>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-                    <h1 className="text-2xl font-bold text-slate-900 font-sans">Add Client</h1>
-                    <p className="text-slate-500 mt-1">Create a new client profile linked to your account.</p>
+            <div className="bg-card-bg rounded-3xl border border-border-accent shadow-sm overflow-hidden font-secondary">
+                <div className="p-8 border-b border-border-accent bg-alt-bg/50">
+                    <h1 className="text-3xl font-black text-secondary font-primary tracking-tight">Add New Client</h1>
+                    <p className="text-text-secondary mt-1 font-bold uppercase tracking-widest text-[10px]">Create a new client profile linked to your account.</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-8">
@@ -126,33 +126,33 @@ export default function AddClient() {
                     )}
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <Building2 size={18} />
                             <span>Company Details</span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Company Name *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Company Name *</label>
                                 <input
                                     required
                                     name="companyName"
                                     value={formData.companyName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Industry</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Industry</label>
                                 <input
                                     name="industry"
                                     value={formData.industry}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Website *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Website *</label>
                                 <div className="relative">
                                     <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
@@ -166,7 +166,7 @@ export default function AddClient() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Status</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Status</label>
                                 <select
                                     name="status"
                                     value={formData.status}
@@ -182,59 +182,59 @@ export default function AddClient() {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <UserPlus size={18} />
                             <span>Primary Contact Detail</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Contact Person *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Contact Person *</label>
                                 <input
                                     required
                                     name="fullName"
                                     value={formData.fullName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Username *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Username *</label>
                                 <input
                                     required
                                     name="username"
                                     value={formData.username}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Email Address *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Email Address *</label>
                                 <input
                                     required
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Phone *</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Phone *</label>
                                 <input
                                     required
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <MapPin size={18} />
-                            <span>Address *</span>
+                            <span>Location Information</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2 space-y-2">
@@ -290,13 +290,18 @@ export default function AddClient() {
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-slate-100 flex gap-4">
+                    <div className="pt-8 border-t border-border-accent flex gap-4">
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-blue-600 text-white py-3.5 rounded-2xl font-bold font-sans shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center"
+                            className="flex-1 bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:bg-primary-dark hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
                         >
-                            {loading ? <Loader2 className="animate-spin" /> : "Save Client"}
+                            {loading ? <Loader2 className="animate-spin" size={18} /> : (
+                                <>
+                                    <CheckCircle2 size={18} />
+                                    Save Client Portfolio
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>

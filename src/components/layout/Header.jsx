@@ -66,7 +66,7 @@ export default function Header({ onMenuClick }) {
     };
 
     return (
-        <header className="min-h-[64px] bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
+        <header className="min-h-[64px] bg-card-bg border-b border-border-accent flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
             {/* LEFT */}
             <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -77,10 +77,10 @@ export default function Header({ onMenuClick }) {
                 </button>
 
                 <div>
-                    <h1 className="text-base sm:text-lg font-semibold text-slate-900 truncate max-w-[200px] sm:max-w-none">
+                    <h1 className="text-base sm:text-lg font-black font-primary text-secondary truncate max-w-[200px] sm:max-w-none">
                         {getPageInfo.title}
                     </h1>
-                    <p className="text-xs text-slate-500 truncate max-w-[200px] sm:max-w-none">
+                    <p className="text-xs text-text-secondary truncate max-w-[200px] sm:max-w-none">
                         {getPageInfo.subtitle}
                     </p>
                 </div>
@@ -96,7 +96,7 @@ export default function Header({ onMenuClick }) {
                         placeholder="Search..."
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
-                        className="w-64 pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 text-sm"
+                        className="w-64 pl-9 pr-4 py-2 bg-alt-bg border border-border-accent rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
                     />
                     {searchValue && (
                         <button
@@ -109,37 +109,37 @@ export default function Header({ onMenuClick }) {
                 </div>
 
                 {/* Notifications */}
-                <button className="relative p-2 hover:bg-slate-100 rounded-lg text-slate-600">
+                <button className="relative p-2 hover:bg-alt-bg rounded-lg text-text-secondary">
                     <Bell size={18} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-card-bg" />
                 </button>
 
                 {/* USER PROFILE */}
                 <div className="relative">
                     <button
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="flex items-center gap-2.5 pl-3 pr-2 py-1 border-l border-slate-200 hover:bg-slate-50 transition-colors rounded-lg"
+                        className="flex items-center gap-2.5 pl-3 pr-2 py-1 border-l border-border-accent hover:bg-alt-bg transition-colors rounded-lg"
                     >
-                        <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center shadow-sm">
+                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-sm">
                             <User size={16} className="text-white" />
                         </div>
                         <div className="hidden md:block text-left">
-                            <p className="text-sm font-medium text-slate-900">{user.name}</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">{user?.role}</p>
+                            <p className="text-sm font-bold text-secondary">{user.name}</p>
+                            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">{user?.role}</p>
                         </div>
                     </button>
 
                     {showProfileMenu && (
                         <>
                             <div className="fixed inset-0 z-30" onClick={() => setShowProfileMenu(false)} />
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-40 animate-in fade-in zoom-in duration-200">
-                                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/50">
-                                    <p className="text-sm font-semibold text-slate-900">{user.name}</p>
-                                    <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                            <div className="absolute right-0 mt-2 w-48 bg-card-bg rounded-xl shadow-xl border border-border-accent overflow-hidden z-40 animate-in fade-in zoom-in duration-200">
+                                <div className="px-4 py-3 border-b border-border-accent bg-alt-bg/50">
+                                    <p className="text-sm font-bold text-secondary">{user.name}</p>
+                                    <p className="text-xs text-text-secondary truncate">{user.email}</p>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
                                 >
                                     <LogOut size={16} />
                                     <span>Sign out</span>

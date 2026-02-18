@@ -114,46 +114,46 @@ export default function MeetingList() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900 font-sans">Meetings & Calendar</h1>
-                    <p className="text-slate-500">Track and schedule your team syncs and client calls.</p>
+                    <h1 className="text-4xl font-black text-secondary tracking-tight font-primary">Meetings & Sync</h1>
+                    <p className="text-text-secondary font-black uppercase tracking-widest text-[10px] mt-1">Track and schedule your strategic alignment sessions.</p>
                 </div>
 
                 {(currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'client') && (
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="bg-blue-600 text-white px-6 py-2.5 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                        className="bg-secondary text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-secondary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
-                        <Plus size={20} />
-                        Schedule Meeting
+                        <Plus size={18} />
+                        Schedule Briefing
                     </button>
                 )}
             </div>
 
             {/* Content Area */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-100 flex items-center gap-4">
+            <div className="bg-card-bg rounded-[2.5rem] border border-border-accent shadow-sm overflow-hidden font-secondary">
+                <div className="p-6 border-b border-border-accent/30 flex items-center gap-4 bg-alt-bg/30">
                     <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
                         <input
                             type="text"
-                            placeholder="Search meetings..."
+                            placeholder="Filter briefing history..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-2 rounded-xl bg-slate-50 border-transparent focus:bg-white focus:border-blue-500 transition-all"
+                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-card-bg border border-border-accent/50 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/30 transition-all font-bold text-sm text-secondary placeholder:text-text-secondary/20"
                         />
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-widest border-b border-slate-100">
+                        <thead className="bg-alt-bg/50 text-text-secondary/60 text-[10px] font-black uppercase tracking-widest border-b border-border-accent/30">
                             <tr>
-                                <th className="px-6 py-4">Meeting Details</th>
-                                <th className="px-6 py-4">Client / Requirement</th>
-                                <th className="px-6 py-4">Time & Duration</th>
-                                <th className="px-6 py-4">Attendees</th>
-                                <th className="px-6 py-4">Location</th>
-                                <th className="px-6 py-4 text-right">Status</th>
+                                <th className="px-8 py-5">Briefing Scope</th>
+                                <th className="px-8 py-5">Portfolio Account</th>
+                                <th className="px-8 py-5">Timeline</th>
+                                <th className="px-8 py-5">Attendees</th>
+                                <th className="px-8 py-5">Access</th>
+                                <th className="px-8 py-5 text-right">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -168,16 +168,16 @@ export default function MeetingList() {
                             ) : meetings.map((meeting) => (
                                 <tr
                                     key={meeting._id}
-                                    className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                                    className="hover:bg-header-bg/20 transition-colors group cursor-pointer border-b border-border-accent/20 last:border-0"
                                     onClick={() => navigate(`/meetings/${meeting._id}`)}
                                 >
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-900">{meeting.title}</div>
-                                        <div className="text-xs text-slate-500 mt-1 capitalize">{meeting.type.replace('-', ' ')}</div>
+                                    <td className="px-8 py-6">
+                                        <div className="font-black text-secondary group-hover:text-primary transition-colors uppercase tracking-tight text-sm">{meeting.title}</div>
+                                        <div className="text-[10px] text-text-secondary/60 mt-1 uppercase font-bold tracking-widest">{meeting.type.replace('-', ' ')}</div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm font-medium text-slate-700">{meeting.companyName}</div>
-                                        <div className="text-xs text-slate-400 mt-0.5">{meeting.requirementName}</div>
+                                    <td className="px-8 py-6">
+                                        <div className="text-xs font-black text-secondary/80 uppercase tracking-tight">{meeting.companyName}</div>
+                                        <div className="text-[10px] text-text-secondary/40 mt-1 uppercase font-bold tracking-widest">{meeting.requirementName}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-bold text-slate-800">
@@ -202,25 +202,25 @@ export default function MeetingList() {
                                             ))}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-8 py-6">
                                         {meeting.location ? (
                                             <a
                                                 href={meeting.location.startsWith('http') ? meeting.location : `https://${meeting.location}`}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1.5 text-sm"
+                                                className="text-primary hover:text-primary-dark font-black tracking-widest text-[10px] flex items-center gap-1.5 uppercase transition-colors"
                                             >
-                                                <Video size={16} />
-                                                GMeet
+                                                <Video size={14} />
+                                                Video Link
                                             </a>
                                         ) : (
-                                            <span className="text-slate-400 text-sm">TBD</span>
+                                            <span className="text-text-secondary/20 text-[10px] uppercase font-bold">In-Person</span>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${meeting.status === 'scheduled' ? 'bg-blue-50 text-blue-700' :
-                                            meeting.status === 'completed' ? 'bg-green-50 text-green-700' :
-                                                'bg-slate-50 text-slate-500'
+                                    <td className="px-8 py-6 text-right">
+                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${meeting.status === 'scheduled' ? 'bg-primary/10 text-primary' :
+                                            meeting.status === 'completed' ? 'bg-success/10 text-success' :
+                                                'bg-alt-bg text-text-secondary'
                                             }`}>
                                             {meeting.status}
                                         </span>

@@ -77,22 +77,22 @@ export default function EditClient() {
             <div className="flex items-center justify-between">
                 <button
                     onClick={() => navigate(-1)}
-                    className="flex items-center text-slate-500 hover:text-slate-800 transition-colors font-medium group"
+                    className="flex items-center text-text-secondary hover:text-secondary transition-colors font-black uppercase tracking-widest text-[10px] group"
                 >
-                    <ArrowLeft size={20} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-                    Back
+                    <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
+                    Discard Changes
                 </button>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="bg-card-bg rounded-3xl border border-border-accent shadow-sm overflow-hidden font-secondary">
+                <div className="p-8 border-b border-border-accent bg-alt-bg/50 flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900 font-sans">Edit Client Profile</h1>
-                        <p className="text-slate-500 mt-1">Update information for {formData.companyName}</p>
+                        <h1 className="text-3xl font-black text-secondary font-primary tracking-tight">Edit Client Profile</h1>
+                        <p className="text-text-secondary mt-1 font-bold uppercase tracking-widest text-[10px]">Update information for {formData.companyName}</p>
                     </div>
                     <div className="text-right">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block">Client ID</span>
-                        <span className="text-lg font-mono font-bold text-blue-600">{clientData?.uniqueClientId}</span>
+                        <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest block mb-1">Portfolio Reference</span>
+                        <span className="text-xl font-black text-primary font-primary">{clientData?.uniqueClientId}</span>
                     </div>
                 </div>
 
@@ -112,32 +112,32 @@ export default function EditClient() {
                     )}
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <Building2 size={18} />
-                            <span>Business details</span>
+                            <span>Business Identity</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Company Name</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Company Name</label>
                                 <input
                                     required
                                     name="companyName"
                                     value={formData.companyName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Industry</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Industry</label>
                                 <input
                                     name="industry"
                                     value={formData.industry}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Website</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Website</label>
                                 <div className="relative">
                                     <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
@@ -150,7 +150,7 @@ export default function EditClient() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Status</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Status</label>
                                 <select
                                     name="status"
                                     value={formData.status}
@@ -168,22 +168,22 @@ export default function EditClient() {
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <User size={18} />
-                            <span>Primary contact</span>
+                            <span>Primary Representative</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Full Name</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Full Name</label>
                                 <input
                                     name="fullName"
                                     value={formData.fullName}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Email Address</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Email Address</label>
                                 <div className="relative">
                                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
@@ -197,25 +197,25 @@ export default function EditClient() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Phone</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Phone</label>
                                 <input
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all font-bold text-secondary text-sm placeholder:text-text-secondary/30"
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div className="space-y-6">
-                        <div className="flex items-center gap-2 text-blue-600 font-bold border-b border-slate-100 pb-2">
+                        <div className="flex items-center gap-2 text-primary font-black uppercase tracking-widest text-xs border-b border-border-accent/30 pb-2">
                             <MapPin size={18} />
-                            <span>Location</span>
+                            <span>Operations Base</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2 space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Street</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">Street</label>
                                 <input
                                     name="address.street"
                                     value={formData.address.street}
@@ -224,7 +224,7 @@ export default function EditClient() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">City</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">City</label>
                                 <input
                                     name="address.city"
                                     value={formData.address.city}
@@ -233,7 +233,7 @@ export default function EditClient() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">State</label>
+                                <label className="text-xs font-black text-secondary uppercase tracking-widest ml-1">State</label>
                                 <input
                                     name="address.state"
                                     value={formData.address.state}
@@ -244,14 +244,14 @@ export default function EditClient() {
                         </div>
                     </div>
 
-                    <div className="pt-8 border-t border-slate-100">
+                    <div className="pt-8 border-t border-border-accent">
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-bold font-sans shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:bg-primary-dark hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
                         >
                             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                            {loading ? "Saving..." : "Update Client Profile"}
+                            {loading ? "Synchronizing..." : "Update Portfolio Record"}
                         </button>
                     </div>
                 </form>

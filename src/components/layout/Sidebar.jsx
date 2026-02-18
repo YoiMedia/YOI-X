@@ -24,24 +24,24 @@ export default function Sidebar({ collapsed, setCollapsed }) {
 
     return (
         <div
-            className={`h-screen bg-white border-r z-[999] relative border-slate-200 transition-all duration-300 flex flex-col ${collapsed ? "w-16" : "w-64"
+            className={`h-screen bg-card-bg border-r z-[999] relative border-border-accent transition-all duration-300 flex flex-col ${collapsed ? "w-16" : "w-64"
                 }`}
         >
             {/* Header with Logo and Collapse Button */}
-            <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200">
+            <div className="h-16 px-4 flex items-center justify-between border-b border-border-accent">
                 {!collapsed && (
                     <div className="flex items-center gap-2 px-1">
-                        <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                            F
+                        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
+                            Y
                         </div>
-                        <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                            FlowX
+                        <span className="text-xl font-black font-primary text-secondary">
+                            Yoi Media
                         </span>
                     </div>
                 )}
                 <button
                     onClick={() => setCollapsed(!collapsed)}
-                    className="p-1.5 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors ml-auto"
+                    className="p-1.5 rounded-md hover:bg-alt-bg text-text-secondary hover:text-secondary transition-colors ml-auto"
                     title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
                     {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -61,17 +61,17 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                                     key={item.label}
                                     onClick={() => navigate(item.link)}
                                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group ${active
-                                            ? "bg-purple-50 text-purple-700"
-                                            : "text-slate-700 hover:bg-slate-50"
+                                        ? "bg-header-bg text-primary"
+                                        : "text-text-main hover:bg-alt-bg"
                                         }`}
                                     title={collapsed ? item.label : ""}
                                 >
                                     <Icon
                                         size={20}
-                                        className={active ? "text-purple-600" : "text-slate-500 group-hover:text-slate-900"}
+                                        className={active ? "text-primary" : "text-text-secondary group-hover:text-secondary"}
                                     />
                                     {!collapsed && (
-                                        <span className="text-sm font-medium">{item.label}</span>
+                                        <span className="text-sm font-bold">{item.label}</span>
                                     )}
                                 </button>
                             );
@@ -83,26 +83,25 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                             <div key={item.label}>
                                 <button
                                     onClick={() => !collapsed && toggleSection(item.label)}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors group ${isAnyChildActive ? "text-purple-700 bg-purple-50/50" : "text-slate-700 hover:bg-slate-50"
+                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors group ${isAnyChildActive ? "text-primary bg-header-bg" : "text-text-main hover:bg-alt-bg"
                                         }`}
                                     title={collapsed ? item.label : ""}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Icon size={20} className={isAnyChildActive ? "text-purple-600" : "text-slate-500 group-hover:text-slate-900"} />
+                                        <Icon size={20} className={isAnyChildActive ? "text-primary" : "text-text-secondary group-hover:text-secondary"} />
                                         {!collapsed && (
-                                            <span className="text-sm font-medium">{item.label}</span>
+                                            <span className="text-sm font-bold">{item.label}</span>
                                         )}
                                     </div>
                                     {!collapsed && (
                                         <div className={`transition-transform duration-200 ${open[item.label] ? "rotate-180" : ""}`}>
-                                            <ChevronDown size={16} className="text-slate-400" />
+                                            <ChevronDown size={16} className="text-text-secondary" />
                                         </div>
                                     )}
                                 </button>
 
-                                {/* Submenu */}
                                 {open[item.label] && !collapsed && (
-                                    <div className="mt-1 space-y-1 pl-6 border-l border-slate-200 ml-5">
+                                    <div className="mt-1 space-y-1 pl-6 border-l border-border-accent ml-5">
                                         {item.children.map((child) => {
                                             const ChildIcon = child.icon;
                                             const activeChild = isActive(child.link);
@@ -111,13 +110,13 @@ export default function Sidebar({ collapsed, setCollapsed }) {
                                                     key={child.label}
                                                     onClick={() => navigate(child.link)}
                                                     className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm rounded-md transition-colors ${activeChild
-                                                            ? "bg-purple-50 text-purple-700 font-medium"
-                                                            : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                                        ? "bg-header-bg text-primary font-bold"
+                                                        : "text-text-secondary hover:text-secondary hover:bg-alt-bg"
                                                         }`}
                                                 >
                                                     <ChildIcon
                                                         size={16}
-                                                        className={activeChild ? "text-purple-600" : "text-slate-400"}
+                                                        className={activeChild ? "text-primary" : "text-text-secondary"}
                                                     />
                                                     {child.label}
                                                 </button>

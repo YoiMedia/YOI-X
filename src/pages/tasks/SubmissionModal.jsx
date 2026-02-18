@@ -44,8 +44,6 @@ export default function SubmissionModal({ task, requirement, currentUser, onClos
 
             if (!result.ok) throw new Error("Upload failed");
 
-            // We don't necessarily need saveFile here if we store keys in submission, 
-            // but it's good practice for the files table.
             await saveFile({
                 fileName: file.name,
                 fileType: file.type,
@@ -53,7 +51,6 @@ export default function SubmissionModal({ task, requirement, currentUser, onClos
                 storageKey: key,
                 uploadedBy: currentUser.id,
                 entityType: "submission",
-                // entityId will be set after submission is created, or we can leave it optional
             });
 
             setFiles(prev => [...prev, {
@@ -106,47 +103,47 @@ export default function SubmissionModal({ task, requirement, currentUser, onClos
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-white w-full max-w-2xl rounded-4xl shadow-2xl border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-card-bg w-full max-w-2xl rounded-[3rem] shadow-2xl border border-border-accent overflow-hidden animate-in zoom-in-95 duration-300 font-secondary">
+                <div className="px-10 py-8 border-b border-border-accent/10 flex items-center justify-between bg-header-bg/20">
                     <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Submit Your Work</h2>
-                        <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{task.taskNumber} • {requirement.requirementName}</p>
+                        <h2 className="text-2xl font-black text-secondary tracking-tight font-primary">Submit Mission Asset</h2>
+                        <p className="text-[10px] font-black text-text-secondary/40 mt-1 uppercase tracking-[0.2em]">{task.taskNumber} • {requirement.requirementName}</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-slate-900">
+                    <button onClick={onClose} className="p-3 hover:bg-card-bg rounded-2xl transition-all text-text-secondary/40 hover:text-secondary border border-transparent hover:border-border-accent">
                         <X size={20} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Submission Title</label>
+                <form onSubmit={handleSubmit} className="p-10 space-y-8">
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest px-1">Technical Title</label>
                             <input
                                 required
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                                className="w-full p-4 bg-alt-bg/30 border border-border-accent rounded-2xl text-sm font-black text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all"
                                 placeholder="e.g., Initial design draft"
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Description / Notes</label>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest px-1">Executive Summary / Technical Notes</label>
                             <textarea
                                 rows={4}
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
-                                className="w-full p-4 bg-slate-50 border-none rounded-2xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 outline-none transition-all resize-none"
+                                className="w-full p-4 bg-alt-bg/30 border border-border-accent rounded-2xl text-sm font-bold text-secondary focus:ring-4 focus:ring-primary/5 focus:border-primary/20 outline-none transition-all resize-none"
                                 placeholder="Explain what you've completed and any important details..."
                             />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 px-1">Deliverables / Attachments</label>
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest px-1 text-center block">Digital Deliverables</label>
                             <div
                                 onClick={() => fileInputRef.current?.click()}
-                                className="border-2 border-dashed border-slate-200 rounded-3xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50/30 transition-all group"
+                                className="border-2 border-dashed border-border-accent rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4 cursor-pointer hover:border-primary/40 hover:bg-primary/5 transition-all group"
                             >
                                 <input
                                     type="file"
@@ -155,34 +152,34 @@ export default function SubmissionModal({ task, requirement, currentUser, onClos
                                     onChange={handleFileUpload}
                                     disabled={uploading}
                                 />
-                                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                <div className="w-14 h-14 bg-card-bg border border-border-accent rounded-2xl flex items-center justify-center text-text-secondary/20 group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:scale-110 transition-all shadow-sm">
                                     {uploading ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-sm font-bold text-slate-700">Click to upload files</p>
-                                    <p className="text-[10px] font-medium text-slate-400 mt-1">Images, PDFs, Documents (Max 10MB)</p>
+                                    <p className="text-sm font-black text-secondary">Deploy Technical Assets</p>
+                                    <p className="text-[10px] font-black text-text-secondary/40 mt-1 uppercase tracking-widest leading-relaxed">System supports Images, PDFs, and Documents (Max 10MB)</p>
                                 </div>
                             </div>
 
                             {/* File List */}
-                            <div className="mt-4 space-y-2">
+                            <div className="space-y-2">
                                 {files.map((file, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 animate-in slide-in-from-top-2">
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-alt-bg/30 rounded-2xl border border-border-accent animate-in slide-in-from-top-2">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-blue-500 shadow-sm border border-slate-100">
-                                                <FileText size={16} />
+                                            <div className="w-10 h-10 bg-card-bg rounded-xl flex items-center justify-center text-primary shadow-sm border border-border-accent">
+                                                <FileText size={18} />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-slate-700">{file.fileName}</span>
-                                                <span className="text-[10px] font-medium text-slate-400">{(file.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                                                <span className="text-xs font-black text-secondary uppercase tracking-tight">{file.fileName}</span>
+                                                <span className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest mt-0.5">{(file.fileSize / 1024 / 1024).toFixed(2)} MB • Active Payload</span>
                                             </div>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => removeFile(idx)}
-                                            className="p-2 hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors rounded-xl"
+                                            className="p-2.5 hover:bg-error/10 text-text-secondary/20 hover:text-error transition-all rounded-xl"
                                         >
-                                            <Trash2 size={16} />
+                                            <Trash2 size={18} />
                                         </button>
                                     </div>
                                 ))}
@@ -190,28 +187,28 @@ export default function SubmissionModal({ task, requirement, currentUser, onClos
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 pt-4">
+                    <div className="flex items-center gap-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-4 px-6 rounded-2xl text-sm font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
+                            className="flex-1 py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest text-text-secondary hover:text-secondary bg-alt-bg hover:bg-alt-bg/50 transition-all border border-border-accent"
                         >
-                            Discard
+                            Decline
                         </button>
                         <button
                             type="submit"
                             disabled={submitting || uploading}
-                            className="flex-2 py-4 px-6 rounded-2xl text-sm font-black uppercase tracking-widest text-white bg-linear-to-r from-blue-600 to-indigo-600 shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
+                            className="flex-[2] py-4 px-6 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white bg-primary shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
                         >
                             {submitting ? (
                                 <>
                                     <Loader2 size={18} className="animate-spin" />
-                                    Submitting...
+                                    Synchronizing...
                                 </>
                             ) : (
                                 <>
                                     <Send size={18} />
-                                    Submit Work
+                                    Commit Submission
                                 </>
                             )}
                         </button>

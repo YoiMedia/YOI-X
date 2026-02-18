@@ -8,7 +8,7 @@ export default function Layout({ children }) {
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-purple-100 selection:text-purple-700">
+        <div className="flex min-h-screen bg-main-bg font-secondary selection:bg-header-bg selection:text-primary">
             {/* Desktop Sidebar */}
             <div className="hidden lg:block fixed top-0 left-0 h-screen z-30">
                 <Sidebar
@@ -41,15 +41,15 @@ export default function Layout({ children }) {
                     {children}
                 </main>
 
-                <footer className="bg-white border-t border-slate-200 py-3 px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                    <div className="flex items-center gap-1.5 font-medium text-slate-600">
-                        <span>© 2025 FlowX</span>
-                        <span className="h-1 w-1 bg-slate-300 rounded-full" />
+                <footer className="bg-card-bg border-t border-border-accent py-3 px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-secondary">
+                    <div className="flex items-center gap-1.5 font-bold text-text-main">
+                        <span>© 2026 Yoi Media</span>
+                        <span className="h-1 w-1 bg-border-accent rounded-full" />
                         <span>All rights reserved.</span>
                     </div>
                     <div
                         onClick={() => window.open("https://yoimedia.fun", "_blank")}
-                        className="group flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
+                        className="group flex items-center gap-2 cursor-pointer hover:text-primary transition-colors font-bold"
                     >
                         <span>Designed and Developed by Yoi Media</span>
 
