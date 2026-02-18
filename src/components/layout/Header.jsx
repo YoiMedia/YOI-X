@@ -41,7 +41,7 @@ export default function Header({ onMenuClick }) {
         return (
             findInMenu(menu) || {
                 title: "Dashboard",
-                subtitle: "Welcome",
+                subtitle: "Welcome back",
             }
         );
     }, [location.pathname, user?.role]);
