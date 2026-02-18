@@ -1,14 +1,19 @@
-import { useState } from "react";
-import { useAction } from "convex/react";
+import { useState, useEffect } from "react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getUser } from "../../services/auth.service";
 import { UserPlus, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Building2, Globe, MapPin } from "lucide-react";
 
 export default function AddClient() {
     const navigate = useNavigate();
+    const location = useLocation();
     const createClient = useAction(api.users.createClient);
+    const linkLeadToClient = useMutation(api.leads.linkLeadToClient);
     const currentUser = getUser();
+
+    const leadId = location.state?.leadId;
+    const prefillData = location.state?.prefill;
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -32,6 +37,19 @@ export default function AddClient() {
         }
     });
 
+    useEffect(() => {
+        if (prefillData) {
+            setFormData(prev => ({
+                ...prev,
+                ...prefillData,
+                address: {
+                    ...prev.address,
+                    ...(prefillData.address || {})
+                }
+            }));
+        }
+    }, [prefillData]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         if (name.includes('.')) {
@@ -52,10 +70,19 @@ export default function AddClient() {
         setSuccess(false);
 
         try {
-            await createClient({
+            const clientId = await createClient({
                 ...formData,
                 salesPersonId: currentUser.id,
             });
+
+            if (leadId) {
+                await linkLeadToClient({
+                    leadId,
+                    clientId,
+                    userId: currentUser.id,
+                });
+            }
+
             setSuccess(true);
             setTimeout(() => navigate("/clients"), 2000);
         } catch (err) {

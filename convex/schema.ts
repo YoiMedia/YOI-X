@@ -238,7 +238,6 @@ export default defineSchema({
         .index("byUserId", ["userId"])
         .index("byTaskId", ["taskId"])
         .index("byRequirementId", ["requirementId"])
-
         .index("byStartTime", ["startTime"]),
 
     // ============================================
@@ -393,7 +392,6 @@ export default defineSchema({
         createdBy: v.optional(v.id("users")),
         // Relations
         clientId: v.optional(v.id("clients")),
-
         requirementId: v.optional(v.id("requirements")),
         // Document specific fields
         status: v.union(
@@ -439,7 +437,6 @@ export default defineSchema({
         expiresAt: v.optional(v.number()),
     })
         .index("byClientId", ["clientId"])
-
         .index("byRequirementId", ["requirementId"])
         .index("byUploadedBy", ["uploadedBy"])
         .index("byType", ["type"])
@@ -452,7 +449,6 @@ export default defineSchema({
     invoices: defineTable({
         invoiceNumber: v.string(), // Auto-generated, unique
         clientId: v.id("clients"),
-
         documentId: v.optional(v.id("documents")), // Link to PDF document
         // Line items
         lineItems: v.array(
@@ -504,7 +500,6 @@ export default defineSchema({
         updatedAt: v.number(),
     })
         .index("byClientId", ["clientId"])
-
         .index("byStatus", ["status"])
         .index("byInvoiceNumber", ["invoiceNumber"])
         .index("byDueDate", ["dueDate"])
@@ -657,7 +652,6 @@ export default defineSchema({
         ),
         // Relations
         clientId: v.optional(v.id("clients")),
-
         requirementId: v.optional(v.id("requirements")),
         // Status
         status: v.union(
@@ -680,7 +674,6 @@ export default defineSchema({
         updatedAt: v.number(),
     })
         .index("byClientId", ["clientId"])
-
         .index("byOrganizer", ["organizer"])
         .index("byScheduledAt", ["scheduledAt"])
         .index("byStatus", ["status"]),
@@ -691,7 +684,6 @@ export default defineSchema({
     feedback: defineTable({
         clientId: v.id("clients"),
         submissionId: v.optional(v.id("submissions")),
-
         taskId: v.optional(v.id("tasks")),
         rating: v.number(), // 1-5
         category: v.optional(
@@ -717,7 +709,6 @@ export default defineSchema({
     })
         .index("byClientId", ["clientId"])
         .index("bySubmissionId", ["submissionId"])
-
         .index("byRating", ["rating"]),
 
     // ============================================
@@ -806,7 +797,8 @@ export default defineSchema({
                 v.literal("document"),
                 v.literal("invoice"),
                 v.literal("meeting"),
-                v.literal("taskQuery")
+                v.literal("taskQuery"),
+                v.literal("lead")
             )
         ),
         entityId: v.optional(v.string()),
@@ -952,4 +944,128 @@ export default defineSchema({
         .index("byRequirementId", ["requirementId"])
         .index("byClientId", ["clientId"])
         .index("bySubmissionId", ["submissionId"]),
+
+    // ============================================
+    // LEADS - Imported leads from CSV
+    // ============================================
+    leads: defineTable({
+        // CSV import fields
+        name: v.string(),
+        formattedPhoneNumber: v.optional(v.string()),
+        website: v.optional(v.string()),
+        formattedAddress: v.optional(v.string()),
+        rating: v.optional(v.number()),           // e.g. Google rating: 4.5
+        userRatingsTotal: v.optional(v.number()),  // Number of reviews
+        profession: v.optional(v.string()),
+        area: v.optional(v.string()),
+
+        // Overall lead status (global, not per-salesperson)
+        status: v.union(
+            v.literal("new"),
+            v.literal("contacted"),
+            v.literal("interested"),
+            v.literal("not-interested"),
+            v.literal("follow-up"),
+            v.literal("converted"),
+            v.literal("lost")
+        ),
+
+        // If converted, link to client record
+        convertedClientId: v.optional(v.id("clients")),
+        convertedAt: v.optional(v.number()),
+
+        // Import tracking
+        importBatchId: v.optional(v.string()), // UUID/timestamp grouping same CSV import
+        importedBy: v.id("users"),
+
+        // General notes
+        notes: v.optional(v.string()),
+
+        // Soft delete
+        isDeleted: v.optional(v.boolean()),
+        deletedAt: v.optional(v.number()),
+        deletedBy: v.optional(v.id("users")),
+
+        // Timestamps
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("byStatus", ["status"])
+        .index("byImportBatchId", ["importBatchId"])
+        .index("byImportedBy", ["importedBy"])
+        .index("byConvertedClientId", ["convertedClientId"])
+        .index("byProfession", ["profession"])
+        .index("byArea", ["area"])
+        .index("byWebsite", ["website"]),
+
+    // ============================================
+    // LEAD ASSIGNMENTS - Many-to-many: leads <-> sales persons
+    // ============================================
+    leadAssignments: defineTable({
+        leadId: v.id("leads"),
+        salesPersonId: v.id("users"),
+
+        // Per-salesperson status tracking (independent from global lead status)
+        status: v.union(
+            v.literal("new"),
+            v.literal("contacted"),
+            v.literal("interested"),
+            v.literal("not-interested"),
+            v.literal("follow-up"),
+            v.literal("converted"),
+            v.literal("lost")
+        ),
+
+        // Salesperson-specific notes for this lead
+        notes: v.optional(v.string()),
+        lastContactedAt: v.optional(v.number()),
+        nextFollowUpAt: v.optional(v.number()),
+
+        // Who assigned this lead to the salesperson
+        assignedBy: v.id("users"),
+        assignedAt: v.number(),
+
+        // Timestamps
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("byLeadId", ["leadId"])
+        .index("bySalesPersonId", ["salesPersonId"])
+        .index("byLeadAndSales", ["leadId", "salesPersonId"]) // fast lookup of specific assignment
+        .index("byStatus", ["status"])
+        .index("byNextFollowUpAt", ["nextFollowUpAt"]),
+
+    // ============================================
+    // LEAD ACTIVITIES - Full history/audit trail per lead
+    // ============================================
+    leadActivities: defineTable({
+        leadId: v.id("leads"),
+        salesPersonId: v.id("users"),
+
+        type: v.union(
+            v.literal("status-change"),
+            v.literal("note-added"),
+            v.literal("called"),
+            v.literal("emailed"),
+            v.literal("whatsapp"),
+            v.literal("meeting-scheduled"),
+            v.literal("assigned"),
+            v.literal("unassigned"),
+            v.literal("converted"),
+            v.literal("imported")
+        ),
+
+        description: v.optional(v.string()),
+
+        // For status-change type
+        previousStatus: v.optional(v.string()),
+        newStatus: v.optional(v.string()),
+
+        // Timestamps
+        createdAt: v.number(),
+    })
+        .index("byLeadId", ["leadId"])
+        .index("bySalesPersonId", ["salesPersonId"])
+        .index("byLeadAndCreatedAt", ["leadId", "createdAt"])
+        .index("byType", ["type"]),
 });

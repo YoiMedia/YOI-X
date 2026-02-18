@@ -61,6 +61,7 @@ export const superadminMenu = [
         pageTitle: "System Settings",
         subtitle: "Global configuration",
     },
+    { label: "Leads", icon: Headset, link: "/leads" },
 ];
 
 // ==================== ADMIN MENU ====================
@@ -100,6 +101,7 @@ export const salesMenu = [
     { label: "Submissions Review", icon: Archive, link: "/submissions" },
     { label: "Analytics", icon: FolderKanban, link: "/analytics" },
     { label: "Settings", icon: Settings, link: "/settings" },
+    { label: "Leads", icon: Headset, link: "/leads" },
 ];
 
 // ==================== CLIENT MENU ====================

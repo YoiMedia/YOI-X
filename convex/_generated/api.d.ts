@@ -13,6 +13,7 @@ import type * as clients from "../clients.js";
 import type * as debug from "../debug.js";
 import type * as feedbacks from "../feedbacks.js";
 import type * as files from "../files.js";
+import type * as leads from "../leads.js";
 import type * as lib_r2 from "../lib/r2.js";
 import type * as meetingOutcomes from "../meetingOutcomes.js";
 import type * as meetings from "../meetings.js";
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   debug: typeof debug;
   feedbacks: typeof feedbacks;
   files: typeof files;
+  leads: typeof leads;
   "lib/r2": typeof lib_r2;
   meetingOutcomes: typeof meetingOutcomes;
   meetings: typeof meetings;

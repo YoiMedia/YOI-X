@@ -40,7 +40,7 @@ export const routeConfig = {
     },
     leads: {
         basePath: "leads",
-        allowedRoles: ["superadmin", "admin"],
+        allowedRoles: ["superadmin", "admin", "sales"],
         routes: [
             { path: "", component: Leads },
         ],
