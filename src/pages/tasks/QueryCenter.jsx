@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { getUser } from "../../services/auth.service";
 import {
@@ -12,7 +12,11 @@ import {
     AlertCircle,
     Search,
     ChevronRight,
-    Filter
+    Filter,
+    File,
+    X,
+    ExternalLink,
+    Download
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -32,7 +36,7 @@ export default function QueryCenter() {
     );
 
     return (
-        <div className="flex h-[calc(100vh-140px)] bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="flex h-[calc(100vh-140px)] bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
             {/* Sidebar (1/3) */}
             <div className="w-1/3 border-r border-slate-100 flex flex-col bg-slate-50/30">
                 <div className="p-6 border-b border-slate-100 bg-white">
@@ -133,9 +137,18 @@ function QueryChatFullScreen({ query, currentUser }) {
     const sendMessage = useMutation(api.taskQueries.sendMessage);
     const updateQueryStatus = useMutation(api.taskQueries.updateQueryStatus);
 
+    // Attachment related hooks
+    const generateUploadUrl = useAction(api.files.generateUploadUrl);
+    const saveFile = useMutation(api.files.saveFile);
+
     const [messageText, setMessageText] = useState("");
     const [sending, setSending] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [downloading, setDownloading] = useState(null); // Track which fileId is downloading
+    const [attachments, setAttachments] = useState([]);
     const messagesEndRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const getFileUrl = useAction(api.files.getFileUrl);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -145,18 +158,96 @@ function QueryChatFullScreen({ query, currentUser }) {
         scrollToBottom();
     }, [messages]);
 
+    const handleFileSelect = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Reset input
+        e.target.value = '';
+
+        setUploading(true);
+        const toastId = toast.loading(`Uploading ${file.name}...`);
+
+        try {
+            // 1. Get upload URL
+            const { uploadUrl, key } = await generateUploadUrl({
+                contentType: file.type,
+                fileName: file.name
+            });
+
+            // 2. Upload to R2
+            const result = await fetch(uploadUrl, {
+                method: "PUT",
+                body: file,
+                headers: { "Content-Type": file.type },
+            });
+
+            if (!result.ok) throw new Error("Upload failed");
+
+            // 3. Save file record
+            const fileId = await saveFile({
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                storageKey: key,
+                uploadedBy: currentUser.id,
+                entityType: "taskQuery",
+                entityId: query._id
+            });
+
+            setAttachments(prev => [...prev, {
+                fileId,
+                storageKey: key,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size
+            }]);
+
+            toast.success(`${file.name} attached`, { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error(`Failed to upload ${file.name}`, { id: toastId });
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDownload = async (file) => {
+        if (!file.storageKey) {
+            toast.error("File storage key missing");
+            return;
+        }
+
+        setDownloading(file.fileId);
+        try {
+            const url = await getFileUrl({ storageKey: file.storageKey });
+            window.open(url, '_blank');
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to generate download link");
+        } finally {
+            setDownloading(null);
+        }
+    };
+
+    const removeAttachment = (index) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!messageText.trim()) return;
+        if (!messageText.trim() && attachments.length === 0) return;
 
         setSending(true);
         try {
             await sendMessage({
                 queryId: query._id,
                 senderId: currentUser.id,
-                content: messageText,
+                content: messageText || (attachments.length > 0 ? "Shared attachments" : ""),
+                attachments: attachments.length > 0 ? attachments : undefined
             });
             setMessageText("");
+            setAttachments([]);
         } catch (error) {
             toast.error("Failed to send message");
         } finally {
@@ -245,7 +336,7 @@ function QueryChatFullScreen({ query, currentUser }) {
                     ) : (
                         <button
                             onClick={() => handleStatusChange("active")}
-                            className="bg-amber-50 text-amber-700 px-5 py-2.5 rounded-[1.25rem] text-xs font-black uppercase tracking-wider hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 shadow-sm"
+                            className="bg-amber-50 text-amber-700 px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 shadow-sm"
                         >
                             <AlertCircle size={16} />
                             Reopen
@@ -292,7 +383,38 @@ function QueryChatFullScreen({ query, currentUser }) {
                                             ? "bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none shadow-lg shadow-blue-500/10"
                                             : "bg-white text-slate-700 border border-slate-100 rounded-tl-none shadow-sm"
                                             }`}>
-                                            {message.content}
+                                            <p className="whitespace-pre-wrap">{message.content}</p>
+
+                                            {message.attachments && message.attachments.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    {message.attachments.map((file, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => handleDownload(file)}
+                                                            disabled={downloading === file.fileId}
+                                                            className={`w-full flex items-center gap-3 p-3 rounded-2xl border transition-all hover:scale-[1.02] ${isOwn
+                                                                ? "bg-white/10 border-white/20 text-white hover:bg-white/20"
+                                                                : "bg-slate-50 border-slate-100 text-slate-700 hover:bg-slate-100"
+                                                                }`}
+                                                        >
+                                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isOwn ? "bg-white/20" : "bg-white shadow-sm text-blue-500"}`}>
+                                                                {downloading === file.fileId ? (
+                                                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
+                                                                ) : (
+                                                                    <File size={16} />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0 text-left">
+                                                                <p className="text-xs font-bold truncate">{file.fileName}</p>
+                                                                <p className={`text-[10px] ${isOwn ? "text-white/60" : "text-slate-400"}`}>
+                                                                    {(file.fileSize / 1024).toFixed(1)} KB
+                                                                </p>
+                                                            </div>
+                                                            <Download size={14} className={isOwn ? "text-white/40" : "text-slate-300"} />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -305,32 +427,61 @@ function QueryChatFullScreen({ query, currentUser }) {
 
             {/* Input Area */}
             <div className="p-8 bg-white border-t border-slate-100">
+                {/* Pending Attachments */}
+                {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4 px-2">
+                        {attachments.map((file, idx) => (
+                            <div key={idx} className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-200">
+                                <File size={14} />
+                                <span className="text-[11px] font-bold truncate max-w-[150px]">{file.fileName}</span>
+                                <button
+                                    onClick={() => removeAttachment(idx)}
+                                    className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
                 <form onSubmit={handleSendMessage} className="flex gap-4">
                     <div className="flex-1 relative flex items-center">
-                        <div className="absolute left-4 p-2 text-slate-400 hover:text-blue-500 cursor-pointer transition-colors">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileSelect}
+                            className="hidden"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className={`absolute left-4 p-2 transition-colors ${uploading ? "text-blue-500 animate-pulse" : "text-slate-400 hover:text-blue-500"}`}
+                        >
                             <Paperclip size={18} />
-                        </div>
+                        </button>
                         <input
                             type="text"
                             value={messageText}
                             onChange={(e) => setMessageText(e.target.value)}
-                            placeholder="Type a message or use @mention..."
-                            className="w-full pl-14 pr-6 py-4 bg-slate-50 border-transparent rounded-4xl text-sm font-medium focus:bg-white focus:border-blue-100 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all"
-                            disabled={sending}
+                            placeholder={uploading ? "Uploading file..." : "Type a message or use @mention..."}
+                            className="w-full pl-16 pr-8 py-6 bg-slate-50 border-transparent rounded-4xl text-sm font-medium focus:bg-white focus:border-blue-100 focus:ring-4 focus:ring-blue-500/5 outline-none transition-all resize-none shadow-inner"
+                            disabled={sending || uploading}
                         />
                     </div>
                     <button
                         type="submit"
-                        disabled={sending || !messageText.trim()}
-                        className="bg-linear-to-r from-blue-600 to-indigo-600 text-white px-8 rounded-[2rem] font-black uppercase tracking-wider text-xs shadow-xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:scale-100"
+                        disabled={sending || uploading || (!messageText.trim() && attachments.length === 0)}
+                        className="w-fit p-6 bg-linear-to-r from-blue-600 to-indigo-600 text-white rounded-4xl text-sm font-black uppercase tracking-widest shadow-2xl shadow-blue-600/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:scale-100"
                     >
-                        <Send size={16} />
-                        Send
+                        <Send size={20} />
+                        {/* {sending ? "Sending..." : "Send"} */}
                     </button>
                 </form>
                 <div className="mt-3 flex items-center justify-between px-2">
                     <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
-                        Press Enter to send message
+                        {uploading ? "Please wait for upload..." : "Press Enter to send message"}
                     </p>
                     <div className="flex gap-4">
                         <span className="text-[10px] font-bold text-blue-400/60 uppercase tracking-tight cursor-help transition-colors hover:text-blue-500">@client</span>

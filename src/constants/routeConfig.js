@@ -12,10 +12,13 @@ import MeetingList from "../pages/meetings/MeetingList";
 import MeetingDetails from "../pages/meetings/MeetingDetails";
 import PlaceholderPage from "../pages/placeholders/PlaceholderPage";
 import RequirementsDashboard from "../pages/requirements/RequirementsDashboard";
-import NewProject from "../pages/requirements/NewProject";
+
 import NewRequirement from "../pages/requirements/NewRequirement";
 import MyTasks from "../pages/tasks/MyTasks";
 import QueryCenter from "../pages/tasks/QueryCenter";
+import Submissions from "../pages/submissions/Submissions";
+import SubmissionDetails from "../pages/submissions/SubmissionDetails";
+import FeedbackPage from "../pages/feedback/FeedbackPage";
 
 export const publicRoutes = {
     auth: {
@@ -69,7 +72,7 @@ export const routeConfig = {
         allowedRoles: ["sales", "admin", "superadmin", "employee", "client"],
         routes: [
             { path: "", component: RequirementsDashboard },
-            { path: "new-project", component: NewProject },
+
             { path: "new-requirement", component: NewRequirement },
             { path: ":id", component: NewRequirement },
         ],
@@ -87,7 +90,10 @@ export const routeConfig = {
     submissions: {
         basePath: "submissions",
         allowedRoles: ["sales", "admin", "superadmin", "employee", "client"],
-        routes: [{ path: "", component: PlaceholderPage }],
+        routes: [
+            { path: "", component: Submissions },
+            { path: ":id", component: SubmissionDetails },
+        ],
     },
     documents: {
         basePath: "documents",
@@ -97,7 +103,7 @@ export const routeConfig = {
     feedback: {
         basePath: "feedback",
         allowedRoles: ["client"],
-        routes: [{ path: "", component: PlaceholderPage }],
+        routes: [{ path: "", component: FeedbackPage }],
     },
     support: {
         basePath: "support",

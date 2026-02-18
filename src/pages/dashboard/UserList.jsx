@@ -35,6 +35,13 @@ export default function UserList() {
 
     const getRoleBadge = (role) => {
         switch (role) {
+            case "superadmin":
+                return (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700 border border-red-100 uppercase tracking-wider">
+                        <ShieldCheck size={12} className="mr-1" />
+                        Superadmin
+                    </span>
+                );
             case "admin":
                 return (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-100 uppercase tracking-wider">
@@ -91,7 +98,7 @@ export default function UserList() {
                     />
                 </div>
                 <div className="flex items-center gap-2 p-1 bg-slate-50 rounded-2xl border border-slate-100 w-full md:w-auto overflow-x-auto whitespace-nowrap scrollbar-hide">
-                    {["all", "admin", "sales", "employee"].map((role) => (
+                    {["all", "superadmin", "admin", "sales", "employee"].map((role) => (
                         <button
                             key={role}
                             onClick={() => setFilterRole(role)}

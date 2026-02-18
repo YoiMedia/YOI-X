@@ -12,7 +12,8 @@ export default function ClientList() {
 
     // If Admin/Superadmin, list all. If Sales (Freelancer), list only theirs.
     const isSales = currentUser?.role === "sales";
-    const clients = useQuery(api.clients.listClients, isSales ? { salesPersonId: currentUser.id } : {});
+    const isAdminOrSuper = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+    const clients = useQuery(api.clients.listClients, isAdminOrSuper ? {} : { salesPersonId: currentUser?.id });
 
     const filteredClients = clients?.filter(c =>
         c.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -54,7 +54,7 @@ const ClientLogin = () => {
             const user = await verifyLogin({ email, password });
             login(user);
             toast.success(`Welcome back, ${user.name}!`);
-            navigate("/");
+            window.location.href = "/";
         } catch (error) {
             toast.error(error.message || "Invalid password");
         } finally {

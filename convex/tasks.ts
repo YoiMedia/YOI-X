@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Doc, Id } from "./_generated/dataModel";
 
 export const createTask = mutation({
     args: {
@@ -23,11 +24,31 @@ export const createTask = mutation({
 export const listTasks = query({
     args: { requirementId: v.id("requirements") },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const tasks = await ctx.db
             .query("tasks")
             .withIndex("byRequirementId", (q) => q.eq("requirementId", args.requirementId))
-            .filter((q) => q.eq(q.field("isDeleted"), false))
+            .filter((q) => q.neq(q.field("isDeleted"), true))
             .collect();
+
+        // Enrich with requester details if any
+        return await Promise.all(tasks.map(async (task: Doc<"tasks">) => {
+            // Get requester details
+            const requesterDetails = task.requestedBy && task.requestedBy.length > 0
+                ? await Promise.all(task.requestedBy.map(async (uid: Id<"users">) => {
+                    const u = await ctx.db.get(uid) as Doc<"users"> | null;
+                    return u ? { id: u._id, name: u.fullName } : null;
+                }))
+                : [];
+
+            // Get assignee details
+            const assignee = task.assignedTo ? await ctx.db.get(task.assignedTo) as Doc<"users"> | null : null;
+
+            return {
+                ...task,
+                assignedToName: assignee?.fullName,
+                requesterDetails: requesterDetails.filter((r): r is { id: Id<"users">, name: string } => r !== null)
+            };
+        }));
     },
 });
 
@@ -36,7 +57,8 @@ export const addTask = mutation({
         title: v.string(),
         description: v.optional(v.string()),
         requirementId: v.id("requirements"),
-        assignedTo: v.id("users"),
+        assignedTo: v.optional(v.id("users")),
+        createdBy: v.id("users"),
         priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("critical")),
     },
     handler: async (ctx, args) => {
@@ -50,7 +72,7 @@ export const addTask = mutation({
             status: "todo",
             progress: 0,
             subtasks: [],
-            createdBy: args.assignedTo, // For now, since employee creates it for themselves
+            createdBy: args.createdBy,
             isDeleted: false,
             createdAt: Date.now(),
             updatedAt: Date.now(),
@@ -127,4 +149,46 @@ export const toggleSubtask = mutation({
             status: progress === 100 ? "done" : (progress > 0 ? "in-progress" : "todo"),
         });
     },
+});
+
+export const requestTaskAssignment = mutation({
+    args: { taskId: v.id("tasks"), userId: v.id("users") },
+    handler: async (ctx, args) => {
+        const task = await ctx.db.get(args.taskId);
+        if (!task) throw new Error("Task not found");
+
+        const currentRequests = task.requestedBy || [];
+        if (!currentRequests.includes(args.userId)) {
+            await ctx.db.patch(args.taskId, {
+                requestedBy: [...currentRequests, args.userId],
+                updatedAt: Date.now()
+            });
+        }
+    }
+});
+
+export const assignTask = mutation({
+    args: { taskId: v.id("tasks"), userId: v.id("users") },
+    handler: async (ctx, args) => {
+        const task = await ctx.db.get(args.taskId);
+        if (!task) throw new Error("Task not found");
+
+        await ctx.db.patch(args.taskId, {
+            assignedTo: args.userId,
+            requestedBy: [], // Clear requests once assigned
+            updatedAt: Date.now()
+        });
+
+        // Also ensure employee is assigned to the requirement so they can see it in My Tasks
+        const req = await ctx.db.get(task.requirementId);
+        if (req) {
+            const currentAssignees = req.assignedEmployees || [];
+            if (!currentAssignees.includes(args.userId)) {
+                await ctx.db.patch(task.requirementId, {
+                    assignedEmployees: [...currentAssignees, args.userId],
+                    updatedAt: Date.now()
+                });
+            }
+        }
+    }
 });

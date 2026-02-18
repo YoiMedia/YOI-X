@@ -80,6 +80,8 @@ export default defineSchema({
         // Revenue tracking
         totalRevenue: v.optional(v.number()),
         lifetimeValue: v.optional(v.number()),
+        // Region
+        region: v.optional(v.string()), // "india", "usa", "uae"
         // Soft delete
         isDeleted: v.optional(v.boolean()),
         deletedAt: v.optional(v.number()),
@@ -94,52 +96,30 @@ export default defineSchema({
         .index("byStatus", ["status"])
         .index("byUniqueClientId", ["uniqueClientId"]),
 
-    // ============================================
-    // PROJECTS - Grouping multiple requirements
-    // ============================================
-    projects: defineTable({
-        projectNumber: v.string(), // Auto-generated
-        projectName: v.string(),
-        description: v.optional(v.string()),
-        clientId: v.id("clients"),
-        status: v.union(
-            v.literal("planning"),
-            v.literal("active"),
-            v.literal("on-hold"),
-            v.literal("completed"),
-            v.literal("cancelled")
-        ),
-        priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("critical")),
-        startDate: v.optional(v.number()),
-        endDate: v.optional(v.number()),
-        estimatedBudget: v.optional(v.number()),
-        actualCost: v.optional(v.number()),
-        projectManagerId: v.id("users"),
-        teamMembers: v.optional(v.array(v.id("users"))),
-        tags: v.optional(v.array(v.string())),
-        // Soft delete
-        isDeleted: v.optional(v.boolean()),
-        deletedAt: v.optional(v.number()),
-        deletedBy: v.optional(v.id("users")),
-        // Timestamps
-        createdAt: v.number(),
-        updatedAt: v.number(),
-    })
-        .index("byClientId", ["clientId"])
-        .index("byProjectManagerId", ["projectManagerId"])
-        .index("byStatus", ["status"])
-        .index("byPriority", ["priority"])
-        .index("byProjectNumber", ["projectNumber"]),
 
     // ============================================
-    // REQUIREMENTS - Project requirements
+    // REQUIREMENTS - Service requirements
     // ============================================
     requirements: defineTable({
         requirementNumber: v.string(), // Auto-generated unique ID
         requirementName: v.string(),
         description: v.optional(v.string()),
-        projectId: v.optional(v.id("projects")), // Can exist without project
         clientId: v.id("clients"),
+        // Service & Package Selection
+        serviceType: v.optional(v.string()),         // "website-dev", "social-media", etc.
+        packageTier: v.optional(v.string()),          // "build", "scale", "empire", etc.
+        region: v.optional(v.string()),               // "india", "usa", "uae"
+        currency: v.optional(v.string()),             // "₹", "$", "AED"
+        mrp: v.optional(v.number()),                  // Auto-calculated, fixed base price
+        dealPrice: v.optional(v.number()),            // Final negotiated price (>= mrp)
+        selectedInclusions: v.optional(v.array(v.string())), // All selected inclusions
+        selectedAddOns: v.optional(
+            v.array(v.object({
+                id: v.string(),
+                name: v.string(),
+                price: v.optional(v.number()),
+            }))
+        ),
         items: v.optional(
             v.array(
                 v.object({
@@ -164,6 +144,7 @@ export default defineSchema({
         actualHours: v.optional(v.number()),
         salesPersonId: v.id("users"),
         assignedEmployees: v.optional(v.array(v.id("users"))),
+        requestedBy: v.optional(v.array(v.id("users"))),
         // Soft delete
         isDeleted: v.optional(v.boolean()),
         deletedAt: v.optional(v.number()),
@@ -172,7 +153,6 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number(),
     })
-        .index("byProjectId", ["projectId"])
         .index("byClientId", ["clientId"])
         .index("bySalesPersonId", ["salesPersonId"])
         .index("byStatus", ["status"])
@@ -205,6 +185,7 @@ export default defineSchema({
         completedDate: v.optional(v.number()),
         tags: v.optional(v.array(v.string())),
         // Subtasks as structured data
+        requestedBy: v.optional(v.array(v.id("users"))),
         subtasks: v.optional(
             v.array(
                 v.object({
@@ -240,7 +221,7 @@ export default defineSchema({
         userId: v.id("users"),
         taskId: v.optional(v.id("tasks")),
         requirementId: v.optional(v.id("requirements")),
-        projectId: v.optional(v.id("projects")),
+
         description: v.optional(v.string()),
         startTime: v.number(),
         endTime: v.optional(v.number()),
@@ -257,7 +238,7 @@ export default defineSchema({
         .index("byUserId", ["userId"])
         .index("byTaskId", ["taskId"])
         .index("byRequirementId", ["requirementId"])
-        .index("byProjectId", ["projectId"])
+
         .index("byStartTime", ["startTime"]),
 
     // ============================================
@@ -316,6 +297,7 @@ export default defineSchema({
             v.array(
                 v.object({
                     fileId: v.id("files"),
+                    storageKey: v.string(),
                     fileName: v.string(),
                     fileType: v.string(),
                     fileSize: v.number(),
@@ -411,7 +393,7 @@ export default defineSchema({
         createdBy: v.optional(v.id("users")),
         // Relations
         clientId: v.optional(v.id("clients")),
-        projectId: v.optional(v.id("projects")),
+
         requirementId: v.optional(v.id("requirements")),
         // Document specific fields
         status: v.union(
@@ -457,7 +439,7 @@ export default defineSchema({
         expiresAt: v.optional(v.number()),
     })
         .index("byClientId", ["clientId"])
-        .index("byProjectId", ["projectId"])
+
         .index("byRequirementId", ["requirementId"])
         .index("byUploadedBy", ["uploadedBy"])
         .index("byType", ["type"])
@@ -470,7 +452,7 @@ export default defineSchema({
     invoices: defineTable({
         invoiceNumber: v.string(), // Auto-generated, unique
         clientId: v.id("clients"),
-        projectId: v.optional(v.id("projects")),
+
         documentId: v.optional(v.id("documents")), // Link to PDF document
         // Line items
         lineItems: v.array(
@@ -522,7 +504,7 @@ export default defineSchema({
         updatedAt: v.number(),
     })
         .index("byClientId", ["clientId"])
-        .index("byProjectId", ["projectId"])
+
         .index("byStatus", ["status"])
         .index("byInvoiceNumber", ["invoiceNumber"])
         .index("byDueDate", ["dueDate"])
@@ -580,11 +562,12 @@ export default defineSchema({
                 v.literal("submission"),
                 v.literal("document"),
                 v.literal("requirement"),
-                v.literal("project"),
                 v.literal("user"),
                 v.literal("client"),
                 v.literal("comment"),
-                v.literal("meeting")
+                v.literal("meeting"),
+                v.literal("meetingOutcome"),
+                v.literal("taskQuery")
             )
         ),
         entityId: v.optional(v.string()),
@@ -616,7 +599,6 @@ export default defineSchema({
             v.literal("task"),
             v.literal("submission"),
             v.literal("requirement"),
-            v.literal("project"),
             v.literal("document"),
             v.literal("invoice")
         ),
@@ -675,7 +657,7 @@ export default defineSchema({
         ),
         // Relations
         clientId: v.optional(v.id("clients")),
-        projectId: v.optional(v.id("projects")),
+
         requirementId: v.optional(v.id("requirements")),
         // Status
         status: v.union(
@@ -698,7 +680,7 @@ export default defineSchema({
         updatedAt: v.number(),
     })
         .index("byClientId", ["clientId"])
-        .index("byProjectId", ["projectId"])
+
         .index("byOrganizer", ["organizer"])
         .index("byScheduledAt", ["scheduledAt"])
         .index("byStatus", ["status"]),
@@ -709,7 +691,7 @@ export default defineSchema({
     feedback: defineTable({
         clientId: v.id("clients"),
         submissionId: v.optional(v.id("submissions")),
-        projectId: v.optional(v.id("projects")),
+
         taskId: v.optional(v.id("tasks")),
         rating: v.number(), // 1-5
         category: v.optional(
@@ -735,7 +717,7 @@ export default defineSchema({
     })
         .index("byClientId", ["clientId"])
         .index("bySubmissionId", ["submissionId"])
-        .index("byProjectId", ["projectId"])
+
         .index("byRating", ["rating"]),
 
     // ============================================
@@ -748,7 +730,6 @@ export default defineSchema({
         description: v.optional(v.string()),
         category: v.optional(
             v.union(
-                v.literal("project"),
                 v.literal("task"),
                 v.literal("client"),
                 v.literal("skill"),
@@ -824,7 +805,8 @@ export default defineSchema({
                 v.literal("submission"),
                 v.literal("document"),
                 v.literal("invoice"),
-                v.literal("meeting")
+                v.literal("meeting"),
+                v.literal("taskQuery")
             )
         ),
         entityId: v.optional(v.string()),
@@ -854,7 +836,6 @@ export default defineSchema({
     milestones: defineTable({
         name: v.string(),
         description: v.optional(v.string()),
-        projectId: v.id("projects"),
         requirementId: v.optional(v.id("requirements")),
         dueDate: v.number(),
         completedDate: v.optional(v.number()),
@@ -875,7 +856,6 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number(),
     })
-        .index("byProjectId", ["projectId"])
         .index("byRequirementId", ["requirementId"])
         .index("byStatus", ["status"])
         .index("byDueDate", ["dueDate"]),
@@ -953,4 +933,23 @@ export default defineSchema({
         .index("byKey", ["key"])
         .index("byCategory", ["category"])
         .index("byUserId", ["userId"]),
+
+    // ============================================
+    // FEEDBACKS - Formal reviews from clients
+    // ============================================
+    feedbacks: defineTable({
+        submissionId: v.optional(v.id("submissions")),
+        requirementId: v.optional(v.id("requirements")),
+        clientId: v.id("clients"),
+        authorId: v.id("users"), // User id of the client reviewer
+        rating: v.number(), // e.g., 1-5
+        comment: v.string(),
+        sentiment: v.optional(v.union(v.literal("positive"), v.literal("neutral"), v.literal("negative"))),
+        isPublic: v.optional(v.boolean()),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("byRequirementId", ["requirementId"])
+        .index("byClientId", ["clientId"])
+        .index("bySubmissionId", ["submissionId"]),
 });

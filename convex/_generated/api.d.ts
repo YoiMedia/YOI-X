@@ -10,12 +10,14 @@
 
 import type * as auth from "../auth.js";
 import type * as clients from "../clients.js";
+import type * as debug from "../debug.js";
+import type * as feedbacks from "../feedbacks.js";
 import type * as files from "../files.js";
 import type * as lib_r2 from "../lib/r2.js";
 import type * as meetingOutcomes from "../meetingOutcomes.js";
 import type * as meetings from "../meetings.js";
-import type * as projects from "../projects.js";
 import type * as requirements from "../requirements.js";
+import type * as submissions from "../submissions.js";
 import type * as taskQueries from "../taskQueries.js";
 import type * as tasks from "../tasks.js";
 import type * as users from "../users.js";
@@ -29,12 +31,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   clients: typeof clients;
+  debug: typeof debug;
+  feedbacks: typeof feedbacks;
   files: typeof files;
   "lib/r2": typeof lib_r2;
   meetingOutcomes: typeof meetingOutcomes;
   meetings: typeof meetings;
-  projects: typeof projects;
   requirements: typeof requirements;
+  submissions: typeof submissions;
   taskQueries: typeof taskQueries;
   tasks: typeof tasks;
   users: typeof users;

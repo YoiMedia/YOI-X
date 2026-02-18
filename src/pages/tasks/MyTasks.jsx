@@ -15,16 +15,19 @@ import {
     Layout,
     Briefcase,
     ListTodo,
+    Send,
     MessageCircle
 } from "lucide-react";
 import toast from "react-hot-toast";
 import TaskQueries from "./TaskQueries";
+import SubmissionModal from "./SubmissionModal";
 
 export default function MyTasks() {
     const currentUser = getUser();
     const requirements = useQuery(api.requirements.listRequirements, {
         userId: currentUser.id,
-        role: currentUser.role
+        role: currentUser.role,
+        assignedOnly: true
     });
 
     const [expandedRequirements, setExpandedRequirements] = useState(new Set());
@@ -32,6 +35,7 @@ export default function MyTasks() {
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const [activeRequirementId, setActiveRequirementId] = useState(null);
     const [queryTaskOpen, setQueryTaskOpen] = useState(null);
+    const [submissionTask, setSubmissionTask] = useState(null); // { task, requirement }
 
     const toggleRequirement = (id) => {
         const next = new Set(expandedRequirements);
@@ -78,6 +82,7 @@ export default function MyTasks() {
                         expandedTasks={expandedTasks}
                         onToggleTask={toggleTask}
                         onOpenQuery={setQueryTaskOpen}
+                        onOpenSubmission={(task) => setSubmissionTask({ task, requirement: req })}
                     />
                 ))}
 
@@ -97,11 +102,21 @@ export default function MyTasks() {
                     onClose={() => setQueryTaskOpen(null)}
                 />
             )}
+
+            {/* Submission Modal */}
+            {submissionTask && (
+                <SubmissionModal
+                    task={submissionTask.task}
+                    requirement={submissionTask.requirement}
+                    currentUser={currentUser}
+                    onClose={() => setSubmissionTask(null)}
+                />
+            )}
         </div>
     );
 }
 
-function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onToggleTask, onOpenQuery }) {
+function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onToggleTask, onOpenQuery, onOpenSubmission }) {
     const tasks = useQuery(api.tasks.listTasks, { requirementId: requirement._id });
     const addTask = useMutation(api.tasks.addTask);
     const currentUser = getUser();
@@ -116,6 +131,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
                 title: newTaskTitle,
                 requirementId: requirement._id,
                 assignedTo: currentUser.id,
+                createdBy: currentUser.id,
                 priority: "medium"
             });
             setNewTaskTitle("");
@@ -145,7 +161,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
                         <div className="flex items-center gap-3 mt-1.5">
                             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
                                 <Briefcase size={14} className="text-slate-400" />
-                                {requirement.projectName || "Unassigned"}
+                                {requirement.clientName || "Unassigned"}
                             </div>
                             <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                             <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
@@ -168,7 +184,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
 
             {isExpanded && (
                 <div className="p-6 pt-0 space-y-4 border-t border-slate-50 mt-4 animate-in slide-in-from-top-2 duration-200">
-                    <div className="flex items-center justify-between items-center bg-slate-50/50 p-4 rounded-2xl">
+                    <div className="flex items-center justify-between bg-slate-50/50 p-4 rounded-2xl">
                         <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                             <CheckSquare size={16} className="text-blue-500" />
                             Implementation Tasks
@@ -189,6 +205,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
                                 isExpanded={expandedTasks.has(task._id)}
                                 onToggle={() => onToggleTask(task._id)}
                                 onOpenQuery={onOpenQuery}
+                                onOpenSubmission={onOpenSubmission}
                             />
                         ))}
 
@@ -220,7 +237,7 @@ function RequirementItem({ requirement, isExpanded, onToggle, expandedTasks, onT
     );
 }
 
-function TaskItem({ task, isExpanded, onToggle, onOpenQuery }) {
+function TaskItem({ task, isExpanded, onToggle, onOpenQuery, onOpenSubmission }) {
     const addSubtask = useMutation(api.tasks.addSubtask);
     const toggleSubtask = useMutation(api.tasks.toggleSubtask);
     const updateStatus = useMutation(api.tasks.updateTaskStatus);
@@ -276,6 +293,19 @@ function TaskItem({ task, isExpanded, onToggle, onOpenQuery }) {
                         <MessageCircle size={14} />
                         Query
                     </button>
+
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenSubmission(task);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold hover:bg-emerald-600 hover:text-white transition-all"
+                        title="Submit your work for review"
+                    >
+                        <Send size={14} />
+                        Submit
+                    </button>
+
                     <select
                         value={task.status}
                         onChange={(e) => handleStatusChange(e.target.value)}

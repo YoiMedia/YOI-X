@@ -24,7 +24,7 @@ export default function Login() {
             if (user) {
                 login(user); // user already has safe details (id, name, email, role, phone)
                 toast.success(`Welcome back, ${user.name || user.fullName}!`);
-                navigate("/");
+                window.location.href = "/";
             }
         } catch (error) {
             toast.error(error.message || "Invalid email or password");
@@ -35,7 +35,6 @@ export default function Login() {
 
     return (
         <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-            <Toaster position="top-right" />
             <div className="w-full max-w-md">
                 {/* Logo/Brand */}
                 <div className="text-center mb-8">

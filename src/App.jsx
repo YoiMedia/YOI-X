@@ -14,7 +14,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <Toaster />
+      <Toaster position="top-right" />
       <Routes>
         {/* Public routes - no Layout */}
         <Route

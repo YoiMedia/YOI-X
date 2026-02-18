@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { Doc } from "./_generated/dataModel";
 
 export const listMeetings = query({
     args: {
@@ -13,7 +14,7 @@ export const listMeetings = query({
             .order("desc")
             .collect();
 
-        if (args.role === "employee" && args.userId) {
+        if ((args.role === "employee" || args.role === "sales") && args.userId) {
             meetings = meetings.filter(m =>
                 m.organizer === args.userId ||
                 m.attendees?.some(a => a.userId === args.userId)
@@ -26,10 +27,24 @@ export const listMeetings = query({
                 .unique();
 
             if (client) {
-                meetings = meetings.filter(m =>
-                    m.clientId === client._id ||
+                const clientMeetings = await ctx.db
+                    .query("meetings")
+                    .withIndex("byClientId", (q) => q.eq("clientId", client._id))
+                    .filter((q) => q.eq(q.field("isDeleted"), false))
+                    .collect();
+
+                const attendeeMeetings = meetings.filter(m =>
                     m.attendees?.some(a => a.userId === args.userId)
                 );
+
+                // Merge and dedup
+                const combined = [...clientMeetings];
+                for (const m of attendeeMeetings) {
+                    if (!combined.some(existing => existing._id === m._id)) {
+                        combined.push(m);
+                    }
+                }
+                meetings = combined.sort((a, b) => b.scheduledAt - a.scheduledAt);
             } else {
                 meetings = meetings.filter(m =>
                     m.attendees?.some(a => a.userId === args.userId)
@@ -42,7 +57,7 @@ export const listMeetings = query({
             meetings.map(async (meeting) => {
                 const organizer = await ctx.db.get(meeting.organizer);
                 const client = meeting.clientId ? await ctx.db.get(meeting.clientId) : null;
-                const project = meeting.projectId ? await ctx.db.get(meeting.projectId) : null;
+
 
                 // Also fetch names of attendees
                 const attendeesWithDetails = await Promise.all(
@@ -57,7 +72,7 @@ export const listMeetings = query({
                     organizerName: organizer?.fullName,
                     clientName: client ? (await ctx.db.get(client.userId))?.fullName || "Unknown Client" : "N/A",
                     companyName: client?.companyName || "N/A",
-                    projectName: project?.projectName || "N/A",
+
                     attendeesWithDetails,
                 };
             })
@@ -83,7 +98,6 @@ export const scheduleMeeting = mutation({
         location: v.optional(v.string()),
         organizer: v.id("users"),
         clientId: v.optional(v.id("clients")),
-        projectId: v.optional(v.id("projects")),
         requirementId: v.optional(v.id("requirements")),
         attendees: v.optional(
             v.array(
@@ -113,7 +127,6 @@ export const getMeetingById = query({
 
         const organizer = await ctx.db.get(meeting.organizer);
         const client = meeting.clientId ? await ctx.db.get(meeting.clientId) : null;
-        const project = meeting.projectId ? await ctx.db.get(meeting.projectId) : null;
 
         const attendeesWithDetails = await Promise.all(
             (meeting.attendees || []).map(async (a) => {
@@ -126,7 +139,6 @@ export const getMeetingById = query({
             ...meeting,
             organizerName: organizer?.fullName,
             companyName: client?.companyName || "N/A",
-            projectName: project?.projectName || "N/A",
             attendeesWithDetails,
         };
     },
@@ -172,16 +184,7 @@ export const getStaff = query({
     }
 });
 
-export const getProjectsByClient = query({
-    args: { clientId: v.id("clients") },
-    handler: async (ctx, args) => {
-        return await ctx.db
-            .query("projects")
-            .withIndex("byClientId", q => q.eq("clientId", args.clientId))
-            .filter(q => q.eq(q.field("isDeleted"), false))
-            .collect();
-    }
-});
+
 
 export const getRequirementsByClient = query({
     args: { clientId: v.id("clients") },
@@ -195,36 +198,47 @@ export const getRequirementsByClient = query({
 });
 
 export const getContextMeetings = query({
-    args: { projectId: v.optional(v.id("projects")) },
+    args: {
+        clientId: v.optional(v.id("clients")),
+        onlyClientMeetings: v.optional(v.boolean())
+    },
     handler: async (ctx, args) => {
-        // Fetch meetings with specific Project ID
-        let projectMeetings: any[] = [];
-        if (args.projectId) {
-            projectMeetings = await ctx.db
+        // Fetch meetings with specific Client ID
+        let clientMeetings: any[] = [];
+        if (args.clientId) {
+            clientMeetings = await ctx.db
                 .query("meetings")
-                .withIndex("byProjectId", q => q.eq("projectId", args.projectId))
+                .withIndex("byClientId", q => q.eq("clientId", args.clientId!))
                 .filter(q => q.eq(q.field("isDeleted"), false))
                 .collect();
         }
 
-        // Fetch "unassigned" meetings (no project ID) - manually filtering as we probably don't have an index for "undefined" or null easily accessible in a simple eq query without scanning,
-        // Actually we do have byProjectId index. We can query range or just scan if small.
-        // Or better, meetings are time-sorted usually.
-        // Let's just scan all recent meetings and filter in code for flexibility for now, optimizing later if needed.
-        // Creating an index "byProjectId" allows querying null? Convex sometimes handles null in index.
-        // But for mixed fetch, let's grab last 50 meetings and filter.
+        if (args.onlyClientMeetings && args.clientId) {
+            // Enrich and return only client meetings
+            return await Promise.all(
+                clientMeetings.map(async (meeting) => {
+                    const organizer = await ctx.db.get(meeting.organizer) as Doc<"users"> | null;
+                    const client = meeting.clientId ? await ctx.db.get(meeting.clientId) as Doc<"clients"> | null : null;
+
+                    return {
+                        ...meeting,
+                        organizerName: organizer?.fullName || "Unknown",
+                        companyName: client?.companyName || "N/A",
+                    };
+                })
+            );
+        }
 
         const allRecentMeetings = await ctx.db.query("meetings")
             .order("desc") // newest first
             .take(50);
 
-        const unassignedMeetings = allRecentMeetings.filter(m => !m.projectId && !m.isDeleted);
+        // Simple filter for fallback/recent context
+        const recentMeetings = allRecentMeetings.filter(m => !m.isDeleted);
 
         // Combine and dedup
-        const combined = [...projectMeetings];
-
-        // Add unassigned if they aren't already there (they shouldn't be)
-        for (const m of unassignedMeetings) {
+        const combined = [...clientMeetings];
+        for (const m of recentMeetings) {
             if (!combined.some(existing => existing._id === m._id)) {
                 combined.push(m);
             }
@@ -233,8 +247,8 @@ export const getContextMeetings = query({
         // Enrich
         return await Promise.all(
             combined.map(async (meeting) => {
-                const organizer: any = await ctx.db.get(meeting.organizer);
-                const client: any = meeting.clientId ? await ctx.db.get(meeting.clientId) : null;
+                const organizer = await ctx.db.get(meeting.organizer) as Doc<"users"> | null;
+                const client = meeting.clientId ? await ctx.db.get(meeting.clientId) as Doc<"clients"> | null : null;
 
                 return {
                     ...meeting,

@@ -330,6 +330,7 @@ export const sendMessage = mutation({
             v.array(
                 v.object({
                     fileId: v.id("files"),
+                    storageKey: v.string(),
                     fileName: v.string(),
                     fileType: v.string(),
                     fileSize: v.number(),

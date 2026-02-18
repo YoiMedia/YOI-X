@@ -9,8 +9,6 @@ export default function Layout({ children }) {
 
     return (
         <div className="flex min-h-screen bg-slate-50 font-sans selection:bg-purple-100 selection:text-purple-700">
-            <Toaster position="top-right" />
-
             {/* Desktop Sidebar */}
             <div className="hidden lg:block fixed top-0 left-0 h-screen z-30">
                 <Sidebar
@@ -50,15 +48,11 @@ export default function Layout({ children }) {
                         <span>All rights reserved.</span>
                     </div>
                     <div
-                        onClick={() => window.open("https://brandwar.in", "_blank")}
+                        onClick={() => window.open("https://yoimedia.fun", "_blank")}
                         className="group flex items-center gap-2 cursor-pointer hover:text-purple-600 transition-colors"
                     >
-                        <span>Designed and Developed by</span>
-                        <img
-                            className="h-4 grayscale group-hover:grayscale-0 transition-all opacity-70 group-hover:opacity-100"
-                            src="https://www.brandwar.in/assets/images/resources/logo-1.png"
-                            alt="Brandwar Logo"
-                        />
+                        <span>Designed and Developed by Yoi Media</span>
+
                     </div>
                 </footer>
             </div>

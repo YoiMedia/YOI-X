@@ -15,52 +15,23 @@ import {
     Filter,
     ArrowRight,
     Loader2,
-    X
+    X,
+    Package
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { SERVICE_TYPES, formatPrice } from "../../constants/servicePackages";
 
 export default function RequirementsDashboard() {
     const navigate = useNavigate();
-    const [searchParams, setSearchParams] = useSearchParams();
     const currentUser = getUser();
-
-    // Determine active tab from SearchParams or Role
-    const defaultTab = currentUser.role === 'employee' ? 'requirements' : 'projects';
-    const [activeTab, setActiveTab] = useState(searchParams.get("tab") || defaultTab);
-    const [searchTerm, setSearchTerm] = useState("");
-
-    // Sync state with search params
-    useEffect(() => {
-        const tab = searchParams.get("tab");
-        if (tab && (tab === "projects" || tab === "requirements")) {
-            setActiveTab(tab);
-        }
-    }, [searchParams]);
-
-    const handleTabChange = (tab) => {
-        setActiveTab(tab);
-        setSearchParams({ tab });
-    };
-
-    const projects = useQuery(api.projects.listProjects, { userId: currentUser.id, role: currentUser.role });
     const requirements = useQuery(api.requirements.listRequirements, { userId: currentUser.id, role: currentUser.role });
-
-    // Filter by project if param exists
-    const projectFilter = searchParams.get("projectId");
-
-    const handleProjectClick = (projectId) => {
-        setSearchParams({ tab: "requirements", projectId });
-    };
-
-    const clearProjectFilter = () => {
-        setSearchParams({ tab: "requirements" });
-    };
+    const [searchTerm, setSearchTerm] = useState("");
 
     // Admin specific: Fetch employees for assignment
     const employees = useQuery(api.users.listUsers, { role: "employee" });
     const assignRequirement = useMutation(api.requirements.assignRequirement);
 
-    const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, reqId: null, reqName: "" });
+    const [assignmentModal, setAssignmentModal] = useState({ isOpen: false, reqId: null, reqName: "", currentAssignees: [] });
 
     const handleAssign = async (employeeId) => {
         if (!assignmentModal.reqId || !employeeId) return;
@@ -76,16 +47,12 @@ export default function RequirementsDashboard() {
         }
     };
 
-    const filteredProjects = projects?.filter(p =>
-        p.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.projectNumber.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
+    // Filter only by search term
     const filteredRequirements = requirements?.filter(r => {
-        const matchesSearch = r.requirementName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            r.requirementNumber.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesProject = projectFilter ? r.projectId === projectFilter : true;
-        return matchesSearch && matchesProject;
+        const matchesSearch = (r.requirementName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.requirementNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (r.clientName || "").toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesSearch;
     });
 
     return (
@@ -93,22 +60,15 @@ export default function RequirementsDashboard() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Project Hub</h1>
-                    <p className="text-slate-500 text-lg font-medium mt-1">Manage projects and their detailed requirements.</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Requirements Hub</h1>
+                    <p className="text-slate-500 text-lg font-medium mt-1">Manage Detailed Requirements & Tasks.</p>
                 </div>
 
                 {(currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
                     <div className="flex gap-3">
                         <button
-                            onClick={() => navigate("/requirements/new-project")}
-                            className="bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-slate-200 hover:scale-105 transition-all"
-                        >
-                            <Plus size={18} />
-                            New Project
-                        </button>
-                        <button
                             onClick={() => navigate("/requirements/new-requirement")}
-                            className="bg-white text-blue-600 border-2 border-blue-100 px-5 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-blue-50 transition-all"
+                            className="bg-slate-900 text-white px-5 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-slate-200 hover:scale-105 transition-all"
                         >
                             <Plus size={18} />
                             Add Requirement
@@ -117,198 +77,63 @@ export default function RequirementsDashboard() {
                 )}
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="flex gap-6 border-b border-slate-100">
-                <button
-                    onClick={() => handleTabChange("projects")}
-                    className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest transition-all ${activeTab === "projects"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-400 hover:text-slate-600"
-                        }`}
-                >
-                    {currentUser.role === 'sales' ? 'My Projects' : (currentUser.role === 'employee' ? 'My Projects' : (currentUser.role === 'client' ? 'My Project' : 'Active Projects'))}
-                </button>
-                <button
-                    onClick={() => handleTabChange("requirements")}
-                    className={`pb-4 px-2 font-bold text-sm uppercase tracking-widest transition-all ${activeTab === "requirements"
-                        ? "text-blue-600 border-b-2 border-blue-600"
-                        : "text-slate-400 hover:text-slate-600"
-                        }`}
-                >
-                    {currentUser.role === 'sales' ? 'My Requirements' : (currentUser.role === 'employee' ? 'My Tasks' : (currentUser.role === 'client' ? 'Requirements' : 'All Requirements'))}
-                </button>
-            </div>
-
             {/* Content Area */}
             <div className="space-y-6">
-                {/* Search & Filter */}
-                <div className="flex flex-col gap-4">
-                    <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder={activeTab === "projects" ? "Search projects..." : "Search requirements..."}
-                            className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 bg-white shadow-xs"
-                        />
-                    </div>
-
-                    {projectFilter && (
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Filter:</span>
-                            <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold border border-blue-100">
-                                <Layout size={14} />
-                                Project View
-                                <button
-                                    onClick={clearProjectFilter}
-                                    className="ml-1 p-0.5 hover:bg-blue-200 rounded-full transition-colors"
-                                    title="Clear Filter"
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                {/* Search */}
+                <div className="relative">
+                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search requirements or clients..."
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 bg-white shadow-xs"
+                    />
                 </div>
 
-                {/* Projects Grid - Grouped by Client */}
-                {activeTab === "projects" && (
-                    <div className="space-y-8">
-                        {!projects && <div className="text-center py-20 text-slate-400"><Layout className="animate-pulse inline mb-2" /> Loading projects...</div>}
+                {/* Requirements List - Grouped by Client */}
+                <div className="space-y-8">
+                    {!requirements && <div className="text-center py-20 text-slate-400">Loading requirements...</div>}
 
-                        {projects && filteredProjects?.length === 0 && (
-                            <div className="col-span-full py-20 text-center text-slate-400 bg-slate-50 rounded-3xl border border-dashed border-slate-200">
-                                <div className="text-xl font-bold text-slate-900">No projects found</div>
-                                <p className="mt-2 text-slate-500">
-                                    {currentUser.role === 'sales' ? "You don't have any projects associated with your clients yet." : "Start a new project to get things moving."}
-                                </p>
-                            </div>
-                        )}
+                    {requirements && filteredRequirements?.length === 0 && (
+                        <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                            <p className="text-slate-400 italic mb-4">No requirements found.</p>
+                        </div>
+                    )}
 
-                        {(() => {
-                            // Group projects by Client
-                            const groupedProjects = filteredProjects?.reduce((acc, project) => {
-                                const client = project.clientName || "Unknown Client";
-                                if (!acc[client]) acc[client] = [];
-                                acc[client].push(project);
-                                return acc;
-                            }, {});
+                    {(() => {
+                        // Grouping Logic: Client
+                        const grouped = filteredRequirements?.reduce((acc, req) => {
+                            const client = req.clientName || "Unassigned Client";
+                            if (!acc[client]) acc[client] = [];
+                            acc[client].push(req);
+                            return acc;
+                        }, {});
 
-                            return Object.entries(groupedProjects || {}).map(([clientName, clientProjects]) => (
-                                <div key={clientName} className="space-y-4">
-                                    <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                        <Briefcase size={20} className="text-blue-500" />
-                                        {clientName}
-                                        {currentUser.role === 'admin' && clientProjects[0]?.clientSalesPersonName && (
-                                            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-lg ml-2">
-                                                Sales: {clientProjects[0].clientSalesPersonName}
-                                            </span>
-                                        )}
-                                    </h2>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {clientProjects.map(project => (
-                                            <div
-                                                key={project._id}
-                                                onClick={() => handleProjectClick(project._id)}
-                                                className="group bg-white p-6 rounded-[2rem] border border-slate-200 hover:shadow-xl hover:shadow-slate-200/50 hover:border-blue-200 transition-all cursor-pointer relative overflow-hidden"
-                                            >
-                                                <div className="absolute top-0 right-0 p-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <ArrowRight className="text-blue-500" />
-                                                </div>
+                        return Object.entries(grouped || {}).map(([clientName, reqs]) => (
+                            <div key={clientName} className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
+                                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                    <Users size={20} className="text-blue-500" />
+                                    {clientName}
+                                    <span className="text-xs font-medium text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100">
+                                        {reqs.length} Req{reqs.length !== 1 && 's'}
+                                    </span>
+                                </h3>
 
-                                                <div className="flex items-start justify-between mb-4">
-                                                    <div className={`
-                                                    w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg
-                                                    ${project.status === 'active' ? 'bg-green-100 text-green-700' :
-                                                            project.status === 'planning' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}
-                                                    `}>
-                                                        {project.projectName.charAt(0)}
-                                                    </div>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-lg text-slate-500">
-                                                        {project.projectNumber}
-                                                    </span>
-                                                </div>
-
-                                                <h3 className="text-xl font-black text-slate-900 mb-1 leading-tight group-hover:text-blue-600 transition-colors">
-                                                    {project.projectName}
-                                                </h3>
-                                                <p className="text-slate-500 font-medium text-sm mb-6 line-clamp-2">
-                                                    {project.description || "No description provided."}
-                                                </p>
-
-                                                <div className="space-y-3 border-t border-slate-50 pt-4">
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                                        <Users size={16} className="text-slate-400" />
-                                                        Manager: {project.projectManagerName}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
-                                                        <Target size={16} className="text-slate-400" />
-                                                        {project.requirementsCount || 0} Requirements
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div className="space-y-3">
+                                    {reqs.map(req => (
+                                        <RequirementItem
+                                            key={req._id}
+                                            req={req}
+                                            currentUser={currentUser}
+                                            navigate={navigate}
+                                            setAssignmentModal={setAssignmentModal}
+                                        />
+                                    ))}
                                 </div>
-                            ));
-                        })()}
-                    </div>
-                )}
-
-                {/* Requirements List - Grouped by Project Only */}
-                {activeTab === "requirements" && (
-                    <div className="space-y-8">
-                        {!requirements && <div className="text-center py-20 text-slate-400">Loading requirements...</div>}
-
-                        {requirements && filteredRequirements?.length === 0 && (
-                            <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
-                                <p className="text-slate-400 italic mb-4">No requirements found{projectFilter ? " for this project" : ""}.</p>
-                                {projectFilter && (
-                                    <button
-                                        onClick={clearProjectFilter}
-                                        className="text-blue-600 font-bold hover:underline"
-                                    >
-                                        Show all requirements
-                                    </button>
-                                )}
                             </div>
-                        )}
-
-                        {(() => {
-                            // Grouping Logic: Project ONLY
-                            const grouped = filteredRequirements?.reduce((acc, req) => {
-                                const project = req.projectName || "Unassigned Project";
-                                if (!acc[project]) acc[project] = [];
-                                acc[project].push(req);
-                                return acc;
-                            }, {});
-
-                            return Object.entries(grouped || {}).map(([projectName, reqs]) => (
-                                <div key={projectName} className="bg-slate-50 rounded-3xl p-6 border border-slate-200">
-                                    <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                                        <Layout size={20} className="text-blue-500" />
-                                        {projectName}
-                                        <span className="text-xs font-medium text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100">
-                                            {reqs.length} Req{reqs.length !== 1 && 's'}
-                                        </span>
-                                    </h3>
-
-                                    <div className="space-y-3">
-                                        {reqs.map(req => (
-                                            <RequirementItem
-                                                key={req._id}
-                                                req={req}
-                                                currentUser={currentUser}
-                                                navigate={navigate}
-                                                setAssignmentModal={setAssignmentModal}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            ));
-                        })()}
-                    </div>
-                )}
+                        ));
+                    })()}
+                </div>
             </div>
 
             {/* Assignment Modal */}
@@ -319,52 +144,84 @@ export default function RequirementsDashboard() {
                         <h3 className="text-xl font-black text-slate-900 mb-2 mt-2">Assign Requirement</h3>
                         <p className="text-slate-500 mb-6 text-sm">Select employees to assign <strong>{assignmentModal.reqName}</strong> to.</p>
 
-                        <div className="space-y-4">
-                            {!employees && <div className="text-center py-4"><Loader2 className="animate-spin inline text-slate-400" /></div>}
+                        <div className="space-y-6">
+                            {/* Requesters Section */}
+                            {assignmentModal.requesters?.length > 0 && (
+                                <div className="space-y-3">
+                                    <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
+                                        <Users size={12} />
+                                        Interested Employees ({assignmentModal.requesters?.length || 0})
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {assignmentModal.requesters?.map(r => {
+                                            const isAssigned = assignmentModal.currentAssignees?.includes(r.id);
+                                            return (
+                                                <button
+                                                    key={r.id}
+                                                    disabled={isAssigned}
+                                                    onClick={() => handleAssign(r.id)}
+                                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all flex items-center gap-2 ${isAssigned
+                                                        ? "bg-green-50 text-green-600 border-green-100 cursor-default"
+                                                        : "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100"
+                                                        }`}
+                                                >
+                                                    {r.name}
+                                                    {!isAssigned && <Plus size={10} />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="border-t border-slate-100 pt-3"></div>
+                                </div>
+                            )}
 
-                            {employees?.length === 0 && <div className="text-center text-slate-400 text-sm">No employees found.</div>}
+                            <div className="space-y-4">
+                                {!employees && <div className="text-center py-4"><Loader2 className="animate-spin inline text-slate-400" /></div>}
 
-                            <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                {employees?.map(emp => {
-                                    const isAssigned = assignmentModal.currentAssignees?.includes(emp._id);
-                                    return (
-                                        <button
-                                            key={emp._id}
-                                            disabled={isAssigned}
-                                            onClick={() => handleAssign(emp._id)}
-                                            className={`flex items-center justify-between p-3 rounded-xl border transition-all group w-full
+                                {employees?.length === 0 && <div className="text-center text-slate-400 text-sm">No employees found.</div>}
+
+                                <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {employees?.map(emp => {
+                                        const isAssigned = assignmentModal.currentAssignees?.includes(emp._id);
+                                        return (
+                                            <button
+                                                key={emp._id}
+                                                disabled={isAssigned}
+                                                onClick={() => handleAssign(emp._id)}
+                                                className={`flex items-center justify-between p-3 rounded-xl border transition-all group w-full
                                                 ${isAssigned
-                                                    ? "bg-slate-50 border-slate-100 opacity-70 cursor-not-allowed"
-                                                    : "hover:bg-blue-50 border-slate-100 hover:border-blue-200 cursor-pointer bg-white"
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${isAssigned ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
-                                                    {emp.fullName.charAt(0)}
+                                                        ? "bg-slate-50 border-slate-100 opacity-70 cursor-not-allowed"
+                                                        : "hover:bg-blue-50 border-slate-100 hover:border-blue-200 cursor-pointer bg-white"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${isAssigned ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
+                                                        {emp.fullName.charAt(0)}
+                                                    </div>
+                                                    <span className={`font-bold text-sm truncate ${isAssigned ? 'text-slate-500' : 'text-slate-700 group-hover:text-blue-700'}`}>
+                                                        {emp.fullName}
+                                                    </span>
                                                 </div>
-                                                <span className={`font-bold text-sm truncate ${isAssigned ? 'text-slate-500' : 'text-slate-700 group-hover:text-blue-700'}`}>
-                                                    {emp.fullName}
-                                                </span>
-                                            </div>
-                                            {isAssigned ? (
-                                                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100">Assigned</span>
-                                            ) : (
-                                                <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                                    <Plus size={14} />
-                                                </div>
-                                            )}
-                                        </button>
-                                    );
-                                })}
+                                                {isAssigned ? (
+                                                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100">Assigned</span>
+                                                ) : (
+                                                    <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                                        <Plus size={14} />
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                        </div>
 
-                        <button
-                            onClick={() => setAssignmentModal({ isOpen: false, reqId: null, reqName: "", currentAssignees: [] })}
-                            className="mt-6 w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-colors"
-                        >
-                            Done
-                        </button>
+                            <button
+                                onClick={() => setAssignmentModal({ isOpen: false, reqId: null, reqName: "", currentAssignees: [] })}
+                                className="mt-6 w-full py-3 bg-slate-100 text-slate-500 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+                            >
+                                Done
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -375,6 +232,10 @@ export default function RequirementsDashboard() {
 function RequirementItem({ req, currentUser, navigate, setAssignmentModal }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const tasks = useQuery(api.tasks.listTasks, { requirementId: req._id });
+    const requestTask = useMutation(api.tasks.requestTaskAssignment);
+    const assignTask = useMutation(api.tasks.assignTask);
+
+    const requestRequirement = useMutation(api.requirements.requestRequirementAssignment);
 
     return (
         <div className={`bg-white rounded-2xl border border-slate-200 transition-all ${isExpanded ? 'shadow-lg border-blue-200' : 'hover:border-blue-300'}`}>
@@ -416,28 +277,96 @@ function RequirementItem({ req, currentUser, navigate, setAssignmentModal }) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-sm font-medium text-slate-500">
-                    {req.estimatedBudget > 0 && <span>${req.estimatedBudget.toLocaleString()}</span>}
+                <div className="flex items-center gap-3 text-sm font-medium text-slate-500">
+                    {req.serviceType && (
+                        <span className="text-[10px] bg-purple-50 text-purple-600 px-2 py-0.5 rounded-md font-black uppercase tracking-wider flex items-center gap-1">
+                            <Package size={10} />
+                            {SERVICE_TYPES.find(s => s.id === req.serviceType)?.label?.split(' ')[0] || req.serviceType}
+                            {req.packageTier && <span className="text-purple-400 font-medium">·{req.packageTier}</span>}
+                        </span>
+                    )}
+                    {/* Pricing Visibility */}
+                    {(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
+                        <div className="flex items-center gap-2">
+                            {req.mrp > 0 && req.region && (
+                                <span className={`${req.dealPrice ? 'text-[11px] text-slate-400 ' : 'font-bold text-blue-600'}`}>
+                                    {formatPrice(req.mrp, req.region)}
+                                    {!req.dealPrice && <span className="ml-1 text-[10px] font-medium opacity-60">MRP</span>}
+                                </span>
+                            )}
+                            {req.dealPrice > 0 && req.region && (
+                                <span className="font-bold text-green-600">{formatPrice(req.dealPrice, req.region)}</span>
+                            )}
+                        </div>
+                    )}
 
-                    {currentUser.role === 'admin' && (
+                    {currentUser.role === 'client' && req.dealPrice > 0 && req.region && (
+                        <span className="font-bold text-green-600">{formatPrice(req.dealPrice, req.region)}</span>
+                    )}
+
+                    {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && (
+                        <div className="flex items-center gap-2">
+                            {/* Requirement Requests for Admin */}
+                            {req.requesterDetails?.length > 0 && !req.assignedEmployeesDetails?.some(e => e.id === currentUser.id) && (
+                                <div className="flex -space-x-2 mr-2">
+                                    {req.requesterDetails.slice(0, 3).map(r => (
+                                        <div key={r.id} className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-[8px] text-white font-bold" title={`${r.name} requested this`}>
+                                            {r.name?.charAt(0)}
+                                        </div>
+                                    ))}
+                                    {req.requesterDetails.length > 3 && (
+                                        <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] text-slate-600 font-bold">
+                                            +{req.requesterDetails.length - 3}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const currentIds = req.assignedEmployeesDetails?.map(u => u.id) || [];
+                                    setAssignmentModal({
+                                        isOpen: true,
+                                        reqId: req._id,
+                                        reqName: req.requirementName,
+                                        currentAssignees: currentIds,
+                                        requesters: req.requesterDetails || []
+                                    });
+                                }}
+                                className="p-2 bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 rounded-lg transition-colors relative"
+                                title="Assign to Employee"
+                            >
+                                <div className="flex items-center gap-1.5 text-xs font-bold">
+                                    <Users size={14} />
+                                    Assign
+                                    {req.requesterDetails?.length > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-600 rounded-full border-2 border-white"></span>
+                                    )}
+                                </div>
+                            </button>
+                        </div>
+                    )}
+
+                    {currentUser.role === 'employee' && (
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                const currentIds = req.assignedEmployeesDetails?.map(u => u.id) || [];
-                                setAssignmentModal({
-                                    isOpen: true,
-                                    reqId: req._id,
-                                    reqName: req.requirementName,
-                                    currentAssignees: currentIds
-                                });
+                                requestRequirement({ requirementId: req._id, userId: currentUser.id })
+                                    .then(() => toast.success("Request sent for this requirement!"))
+                                    .catch(err => toast.error("Failed: " + err.message));
                             }}
-                            className="p-2 bg-slate-100 hover:bg-blue-100 text-slate-500 hover:text-blue-600 rounded-lg transition-colors"
-                            title="Assign to Employee"
+                            disabled={req.requestedBy?.includes(currentUser.id) || req.assignedEmployeesDetails?.some(e => e.id === currentUser.id)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${req.assignedEmployeesDetails?.some(e => e.id === currentUser.id)
+                                ? "bg-green-50 text-green-600 border border-green-100 cursor-default"
+                                : req.requestedBy?.includes(currentUser.id)
+                                    ? "bg-slate-100 text-slate-400 cursor-default"
+                                    : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 ring-offset-2 hover:ring-2 hover:ring-blue-500/20"
+                                }`}
                         >
-                            <div className="flex items-center gap-1.5 text-xs font-bold">
-                                <Users size={14} />
-                                Assign
-                            </div>
+                            {req.assignedEmployeesDetails?.some(e => e.id === currentUser.id)
+                                ? "Assigned"
+                                : req.requestedBy?.includes(currentUser.id) ? "Requested" : "Request to Assign"}
                         </button>
                     )}
 
@@ -476,6 +405,64 @@ function RequirementItem({ req, currentUser, navigate, setAssignmentModal }) {
                                     <div className="flex items-center justify-between mt-2">
                                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{task.taskNumber}</span>
                                         <span className="text-[9px] font-bold text-slate-500 capitalize bg-white px-1.5 py-0.5 rounded border border-slate-100">{task.status.replace('-', ' ')}</span>
+                                    </div>
+
+                                    {/* Task Assignment Controls */}
+                                    <div className="mt-3 pt-2 border-t border-slate-100 flex flex-col gap-2">
+                                        <div className="flex items-center justify-between">
+                                            {task.assignedTo ? (
+                                                <div className="text-[10px] text-slate-500">
+                                                    Assigned to: <span className="font-bold text-slate-700">{task.assignedToName || "User"}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 inline-block">
+                                                    Unassigned
+                                                </div>
+                                            )}
+
+                                            {/* Employee: Request Assignment */}
+                                            {currentUser.role === 'employee' && !task.assignedTo && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        requestTask({ taskId: task._id, userId: currentUser.id })
+                                                            .then(() => toast.success("Request sent!"))
+                                                            .catch(e => toast.error("Failed: " + e.message));
+                                                    }}
+                                                    disabled={task.requestedBy?.includes(currentUser.id)}
+                                                    className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${task.requestedBy?.includes(currentUser.id)
+                                                        ? "bg-slate-100 text-slate-400 cursor-default"
+                                                        : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                                        }`}
+                                                >
+                                                    {task.requestedBy?.includes(currentUser.id) ? "Requested" : "Request Assign"}
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Admin/Superadmin: View Requests & Assign */}
+                                        {(currentUser.role === 'admin' || currentUser.role === 'superadmin') && !task.assignedTo && task.requesterDetails?.length > 0 && (
+                                            <div className="bg-white border boundary-slate-100 rounded-lg p-2">
+                                                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1">Requests:</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {task.requesterDetails.map(r => (
+                                                        <button
+                                                            key={r.id}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                assignTask({ taskId: task._id, userId: r.id })
+                                                                    .then(() => toast.success(`Assigned to ${r.name}`))
+                                                                    .catch(e => toast.error("Failed: " + e.message));
+                                                            }}
+                                                            className="flex items-center gap-1 bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-medium transition-colors border border-blue-100"
+                                                        >
+                                                            <Users size={10} />
+                                                            Assign {r.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

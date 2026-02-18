@@ -186,35 +186,101 @@ export default function MeetingDetails() {
     };
 
     // File Upload Handler
-    const handleFileUpload = async (e) => {
+    const handleFileUpload = async (e, entityType = "meeting", entityId = id) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setUploading(true);
         try {
-            const uploadUrl = await generateUploadUrl();
-            const result = await fetch(uploadUrl, {
-                method: "POST",
+            const { uploadUrl, key } = await generateUploadUrl({ contentType: file.type, fileName: file.name });
+            await fetch(uploadUrl, {
+                method: "PUT",
                 headers: { "Content-Type": file.type },
                 body: file,
             });
-            const { storageId } = await result.json();
 
             await saveFile({
                 fileName: file.name,
                 fileType: file.type,
                 fileSize: file.size,
-                storageKey: storageId,
-                entityType: "meeting",
-                entityId: id,
+                storageKey: key,
+                uploadedBy: currentUser.id,
+                entityType,
+                entityId,
             });
 
             toast.success("File uploaded successfully!");
         } catch (error) {
+            console.error(error);
             toast.error("Failed to upload file");
         } finally {
             setUploading(false);
         }
+    };
+
+    const OutcomeFiles = ({ outcomeId, isEditable }) => {
+        const files = useQuery(api.files.getFiles, { entityType: "meetingOutcome", entityId: outcomeId });
+
+        if (!files || files.length === 0) {
+            if (!isEditable) return null;
+            return (
+                <div className="pt-4 mt-4 border-t border-slate-100/50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Attachments</p>
+                    <label className="flex items-center gap-2 p-3 bg-white border border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors group">
+                        <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, "meetingOutcome", outcomeId)} disabled={uploading} />
+                        <div className="p-1.5 bg-slate-100 rounded-lg text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                            {uploading ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">Attach a file</span>
+                    </label>
+                </div>
+            );
+        }
+
+        return (
+            <div className="pt-4 mt-4 border-t border-slate-100/50 space-y-2">
+                <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attachments ({files.length})</p>
+                    {isEditable && (
+                        <label className="cursor-pointer">
+                            <input type="file" className="hidden" onChange={(e) => handleFileUpload(e, "meetingOutcome", outcomeId)} disabled={uploading} />
+                            <div className="text-blue-600 font-bold text-[10px] flex items-center gap-1 hover:text-blue-700">
+                                {uploading ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                                Add More
+                            </div>
+                        </label>
+                    )}
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                    {files.map(file => (
+                        <div key={file._id} className="flex items-center justify-between p-2 bg-slate-50 rounded-xl group border border-slate-100">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <FileIcon size={12} className="text-slate-400" />
+                                <span className="text-[11px] font-bold text-slate-600 truncate">{file.fileName}</span>
+                            </div>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => handleDownloadFile(file.storageKey, file.fileName)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Download"
+                                >
+                                    <ExternalLink size={12} />
+                                </button>
+                                {isEditable && (
+                                    <button
+                                        onClick={() => handleDeleteFile(file._id)}
+                                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Delete"
+                                    >
+                                        <Trash2 size={12} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     };
 
     const handleDeleteFile = async (fileId) => {
@@ -483,6 +549,7 @@ export default function MeetingDetails() {
                                         ))}
                                     </div>
                                 )}
+                                <OutcomeFiles outcomeId={myOutcome._id} isEditable={true} />
                             </div>
                         ) : (
                             <div className="text-center py-12 text-slate-400">
@@ -525,6 +592,7 @@ export default function MeetingDetails() {
                                                 ))}
                                             </div>
                                         )}
+                                        <OutcomeFiles outcomeId={outcome._id} isEditable={false} />
                                     </div>
                                 ))}
                             </div>

@@ -34,7 +34,7 @@ const VerifyMagicLink = () => {
             setTimeout(() => {
                 login(user);
                 toast.success("Password set successfully! Redirecting...");
-                navigate("/");
+                window.location.href = "/";
             }, 2000);
         } catch (error) {
             toast.error(error.message || "Failed to set password");
@@ -67,7 +67,8 @@ const VerifyMagicLink = () => {
         );
     }
 
-    if (!verification.valid) {
+    // Don't show error if we already succeeded (prevents flickers during state transitions)
+    if (!verification.valid && !isSuccess) {
         return (
             <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 font-outfit">
                 <div className="bg-[#1e293b] p-8 rounded-3xl border border-white/5 text-center max-w-md shadow-2xl">

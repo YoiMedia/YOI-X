@@ -48,7 +48,11 @@ export const superadminMenu = [
             },
         ],
     },
+    { label: "Clients", icon: Users, link: "/clients" },
+    { label: "Requirements", icon: FolderKanban, link: "/requirements" },
+    { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Queries", icon: MessageCircle, link: "/queries" },
+    { label: "Submissions", icon: Archive, link: "/submissions" },
     {
         label: "Settings",
         icon: Settings,
@@ -62,9 +66,10 @@ export const superadminMenu = [
 export const adminMenu = [
     { label: "Dashboard", icon: LayoutDashboard, link: "/" },
     { label: "Clients", icon: Users, link: "/clients" },
-    { label: "Projects", icon: FolderKanban, link: "/requirements" },
+    { label: "Requirements", icon: FolderKanban, link: "/requirements" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Queries", icon: MessageCircle, link: "/queries" },
+    { label: "Submissions", icon: Archive, link: "/submissions" },
     { label: "Employees", icon: UserCog, link: "/employees" },
     { label: "Approvals", icon: ClipboardCheck, link: "/approvals-queue" },
     { label: "Settings", icon: Settings, link: "/settings" },
@@ -74,7 +79,8 @@ export const adminMenu = [
 export const employeeMenu = [
     { label: "Dashboard", icon: LayoutDashboard, link: "/" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
-    { label: "Projects", icon: FolderKanban, link: "/requirements?tab=projects" },
+    { label: "Requirements", icon: FolderKanban, link: "/requirements" },
+
     { label: "My Tasks", icon: CheckSquare, link: "/my-tasks" },
     { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Submissions", icon: Archive, link: "/submissions" },
@@ -86,7 +92,7 @@ export const salesMenu = [
     { label: "Clients", icon: Users, link: "/clients" },
     { label: "Documents", icon: FileText, link: "/proposals" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
-    { label: "Requirements", icon: ClipboardCheck, link: "/requirements" },
+    { label: "Requirements", icon: FolderKanban, link: "/requirements" },
     { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Submissions Review", icon: Archive, link: "/submissions" },
     { label: "Analytics", icon: FolderKanban, link: "/analytics" },
@@ -96,7 +102,8 @@ export const salesMenu = [
 // ==================== CLIENT MENU ====================
 export const clientMenu = [
     { label: "Dashboard", icon: LayoutDashboard, link: "/" },
-    { label: "My Project", icon: FolderKanban, link: "/requirements" },
+    { label: "Requirements", icon: FolderKanban, link: "/requirements" },
+
     { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Documents", icon: FileText, link: "/documents" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },

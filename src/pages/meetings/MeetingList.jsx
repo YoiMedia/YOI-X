@@ -37,17 +37,12 @@ export default function MeetingList() {
         duration: 30,
         location: "",
         clientId: "",
-        projectId: "",
         requirementId: "",
         attendees: [],
         description: "",
     });
 
-    // Dynamic Data
-    const selectedProjects = useQuery(
-        api.meetings.getProjectsByClient,
-        formData.clientId ? { clientId: formData.clientId } : "skip"
-    );
+
     const selectedRequirements = useQuery(
         api.meetings.getRequirementsByClient,
         formData.clientId ? { clientId: formData.clientId } : "skip"
@@ -83,7 +78,6 @@ export default function MeetingList() {
                 scheduledAt: new Date(formData.scheduledAt).getTime(),
                 organizer: currentUser.id,
                 // Clean up empty optional fields
-                projectId: formData.projectId || undefined,
                 requirementId: formData.requirementId || undefined,
                 clientId: formData.clientId || undefined,
             });
@@ -96,7 +90,6 @@ export default function MeetingList() {
                 duration: 30,
                 location: "",
                 clientId: "",
-                projectId: "",
                 requirementId: "",
                 attendees: [],
                 description: "",
@@ -156,7 +149,7 @@ export default function MeetingList() {
                         <thead className="bg-slate-50/50 text-slate-500 text-xs font-bold uppercase tracking-widest border-b border-slate-100">
                             <tr>
                                 <th className="px-6 py-4">Meeting Details</th>
-                                <th className="px-6 py-4">Client / Project</th>
+                                <th className="px-6 py-4">Client / Requirement</th>
                                 <th className="px-6 py-4">Time & Duration</th>
                                 <th className="px-6 py-4">Attendees</th>
                                 <th className="px-6 py-4">Location</th>
@@ -184,7 +177,7 @@ export default function MeetingList() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-medium text-slate-700">{meeting.companyName}</div>
-                                        <div className="text-xs text-slate-400 mt-0.5">{meeting.projectName}</div>
+                                        <div className="text-xs text-slate-400 mt-0.5">{meeting.requirementName}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm font-bold text-slate-800">
@@ -276,7 +269,7 @@ export default function MeetingList() {
                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white"
                                     >
                                         <option value="sales-call">Sales Call</option>
-                                        <option value="project-kickoff">Project Kickoff</option>
+                                        <option value="kickoff">Kickoff Call</option>
                                         <option value="status-update">Status Update</option>
                                         <option value="review">Review</option>
                                         <option value="general">General</option>
@@ -339,17 +332,17 @@ export default function MeetingList() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Project / Requirement</label>
+                                    <label className="text-sm font-bold text-slate-700">Requirement</label>
                                     <select
-                                        name="projectId"
-                                        value={formData.projectId}
+                                        name="requirementId"
+                                        value={formData.requirementId}
                                         onChange={handleInputChange}
                                         disabled={!formData.clientId}
                                         className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white disabled:bg-slate-50 disabled:text-slate-400"
                                     >
-                                        <option value="">Select Project (Optional)</option>
-                                        {selectedProjects?.map(p => (
-                                            <option key={p._id} value={p._id}>{p.projectName}</option>
+                                        <option value="">Select Requirement (Optional)</option>
+                                        {selectedRequirements?.map(r => (
+                                            <option key={r._id} value={r._id}>{r.requirementName}</option>
                                         ))}
                                     </select>
                                 </div>

@@ -30,11 +30,12 @@ export const saveFile = mutation({
                 v.literal("submission"),
                 v.literal("document"),
                 v.literal("requirement"),
-                v.literal("project"),
                 v.literal("user"),
                 v.literal("client"),
                 v.literal("comment"),
-                v.literal("meeting")
+                v.literal("meeting"),
+                v.literal("meetingOutcome"),
+                v.literal("taskQuery")
             )
         ),
         entityId: v.optional(v.string()),
@@ -59,11 +60,12 @@ export const copyFileToEntity = mutation({
             v.literal("submission"),
             v.literal("document"),
             v.literal("requirement"),
-            v.literal("project"),
             v.literal("user"),
             v.literal("client"),
             v.literal("comment"),
-            v.literal("meeting")
+            v.literal("meeting"),
+            v.literal("meetingOutcome"),
+            v.literal("taskQuery")
         ),
         targetEntityId: v.string(),
         userId: v.id("users"), // who performed the copy

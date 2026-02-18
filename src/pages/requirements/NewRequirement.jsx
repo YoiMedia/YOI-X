@@ -14,33 +14,66 @@ import {
     FileText,
     ArrowDownToLine,
     ArrowRight,
-    Users as UsersIcon
+    Users as UsersIcon,
+    Globe,
+    Target,
+    Layers,
+    Share2,
+    MessageSquare,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Package,
+    IndianRupee,
+    DollarSign,
+    BadgeCheck,
+    Sparkles,
+    Crown,
+    Zap,
+    AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import {
+    SERVICE_TYPES,
+    SERVICE_PACKAGES,
+    REGIONS,
+    getHigherTierInclusions,
+    formatPrice,
+    formatPriceRange,
+} from "../../constants/servicePackages";
+
+const SERVICE_ICONS = {
+    Globe, Target, Layers, Share2, MessageSquare,
+};
+
+const TIER_COLORS = [
+    { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700", ring: "ring-blue-500", icon: Zap, gradient: "from-blue-500 to-blue-600" },
+    { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700", ring: "ring-purple-500", icon: Sparkles, gradient: "from-purple-500 to-purple-600" },
+    { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700", ring: "ring-amber-500", icon: Crown, gradient: "from-amber-500 to-amber-600" },
+    { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-700", ring: "ring-emerald-500", icon: BadgeCheck, gradient: "from-emerald-500 to-emerald-600" },
+];
 
 export default function NewRequirement() {
     const navigate = useNavigate();
-    const { id, projectId: paramProjectId } = useParams(); // 'id' for view mode, 'projectId' for new
+    const { id } = useParams();
     const location = useLocation();
     const [searchParams] = useSearchParams();
 
-    // Determine if we are in view mode
     const isViewMode = !!id && id !== "new-requirement";
-
-    // Resolve projectId from Params > State > Query > null
-    const projectId = paramProjectId || location.state?.projectId || searchParams.get("projectId") || "";
+    const clientIdParam = searchParams.get("clientId");
     const currentUser = getUser();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [attachedFiles, setAttachedFiles] = useState([]); // Array of { name, key, type, size }
-    const [newItem, setNewItem] = useState(""); // State for simple item input
+    const [attachedFiles, setAttachedFiles] = useState([]);
+    const [newItem, setNewItem] = useState("");
+    const [showAddOns, setShowAddOns] = useState(false);
+    const [showHigherInclusions, setShowHigherInclusions] = useState(false);
+    const [dealPriceError, setDealPriceError] = useState("");
 
-    // Fetch requirement if in view mode
+    // Fetch data
     const requirement = useQuery(api.requirements.getRequirementById, isViewMode ? { requirementId: id } : "skip");
 
-    // Fetch projects to populate dropdown
-    const projects = useQuery(api.projects.listProjects);
-    const clients = useQuery(api.clients.listClients, currentUser.role === "sales" ? { salesPersonId: currentUser.id } : {});
+    const clients = useQuery(api.clients.listClients, (currentUser.role === "sales") ? { salesPersonId: currentUser.id } : {});
 
     const createRequirement = useMutation(api.requirements.createRequirement);
     const updateRequirement = useMutation(api.requirements.updateRequirement);
@@ -48,20 +81,27 @@ export default function NewRequirement() {
     const saveFile = useMutation(api.files.saveFile);
     const copyFileToEntity = useMutation(api.files.copyFileToEntity);
     const getFileUrl = useAction(api.files.getFileUrl);
-
-    // Fetch existing files if in view mode
     const existingFiles = useQuery(api.files.getFiles, isViewMode ? { entityType: "requirement", entityId: id } : "skip");
 
     const [formData, setFormData] = useState({
         requirementName: "",
         description: "",
-        projectId: projectId || "", // Pre-fill if coming from project page
-        clientId: "", // Will auto-fill if project selected
+
+        clientId: "",
         salesPersonId: currentUser.id,
         priority: "medium",
         estimatedBudget: "",
         estimatedHours: "",
-        items: [] // { id, title, description, priority, estimatedHours }
+        items: [],
+        // New fields
+        serviceType: "",
+        packageTier: "",
+        region: "india",
+        currency: "₹",
+        mrp: 0,
+        dealPrice: "",
+        selectedInclusions: [],
+        selectedAddOns: [],
     });
 
     // Populate data if in view mode
@@ -70,57 +110,146 @@ export default function NewRequirement() {
             setFormData({
                 requirementName: requirement.requirementName,
                 description: requirement.description || "",
-                projectId: requirement.projectId || "",
+
                 clientId: requirement.clientId,
                 salesPersonId: requirement.salesPersonId,
                 priority: requirement.priority || "medium",
                 estimatedBudget: requirement.estimatedBudget?.toString() || "",
                 estimatedHours: requirement.estimatedHours?.toString() || "",
-                items: requirement.items || []
+                items: requirement.items || [],
+                serviceType: requirement.serviceType || "",
+                packageTier: requirement.packageTier || "",
+                region: requirement.region || "india",
+                currency: requirement.currency || "₹",
+                mrp: requirement.mrp || 0,
+                dealPrice: requirement.dealPrice?.toString() || "",
+                selectedInclusions: requirement.selectedInclusions || [],
+                selectedAddOns: requirement.selectedAddOns || [],
             });
         }
     }, [requirement]);
 
     // Fetch Meeting Outcomes for sidebar
     const contextMeetings = useQuery(api.meetings.getContextMeetings,
-        formData.projectId ? { projectId: formData.projectId } : { projectId: undefined }
+        formData.clientId ? { clientId: formData.clientId, onlyClientMeetings: true } : "skip"
     );
 
-    // Effect to auto-select client if project is selected
+
+
+    // Auto-set client region as default when client changes
     useEffect(() => {
-        if (!isViewMode && formData.projectId && projects) {
-            const project = projects.find(p => p._id === formData.projectId);
-            if (project) {
-                setFormData(prev => ({ ...prev, clientId: project.clientId }));
+        if (formData.clientId && clients) {
+            const client = clients.find(c => c._id === formData.clientId);
+            if (client?.region) {
+                const reg = REGIONS.find(r => r.id === client.region);
+                if (reg) {
+                    setFormData(prev => ({ ...prev, region: client.region, currency: reg.currency }));
+                }
             }
         }
-    }, [formData.projectId, projects, isViewMode]);
+    }, [formData.clientId, clients]);
+
+    // Recalculate MRP when service/tier/region changes
+    useEffect(() => {
+        if (formData.serviceType && formData.packageTier && formData.region) {
+            const pkg = formData.serviceType ? SERVICE_PACKAGES[formData.serviceType] : null;
+            if (pkg?.tiers) {
+                const tier = pkg.tiers.find(t => t.id === formData.packageTier);
+                if (tier) {
+                    const pricing = tier.pricing[formData.region];
+                    if (pricing) {
+                        const reg = REGIONS.find(r => r.id === formData.region);
+                        setFormData(prev => ({
+                            ...prev,
+                            mrp: pricing.mrp,
+                            currency: reg?.currency || prev.currency,
+                            // Set base inclusions when tier changes
+                            selectedInclusions: tier.inclusions,
+                        }));
+                    }
+                }
+            }
+        }
+    }, [formData.serviceType, formData.packageTier, formData.region]);
+
+    // Validate deal price
+    useEffect(() => {
+        const dp = Number(formData.dealPrice);
+        if (formData.dealPrice && formData.mrp && dp < formData.mrp) {
+            setDealPriceError(`Deal price cannot be below MRP (${formatPrice(formData.mrp, formData.region)})`);
+        } else {
+            setDealPriceError("");
+        }
+    }, [formData.dealPrice, formData.mrp, formData.region]);
+
+    // Get current package data 
+    const currentServicePkg = formData.serviceType ? SERVICE_PACKAGES[formData.serviceType] : null;
+    const currentTier = currentServicePkg?.tiers.find(t => t.id === formData.packageTier);
+    const higherTierInclusions = formData.serviceType && formData.packageTier
+        ? getHigherTierInclusions(formData.serviceType, formData.packageTier)
+        : [];
+    const availableAddOns = currentServicePkg?.addOns || [];
+
+    // Handlers
+    const handleServiceTypeSelect = (serviceId) => {
+        setFormData(prev => ({
+            ...prev,
+            serviceType: serviceId,
+            packageTier: "",
+            mrp: 0,
+            dealPrice: "",
+            selectedInclusions: [],
+            selectedAddOns: [],
+        }));
+    };
+
+    const handleTierSelect = (tierId) => {
+        setFormData(prev => ({ ...prev, packageTier: tierId, dealPrice: "" }));
+    };
+
+    const handleRegionChange = (regionId) => {
+        const reg = REGIONS.find(r => r.id === regionId);
+        setFormData(prev => ({ ...prev, region: regionId, currency: reg?.currency || prev.currency, dealPrice: "" }));
+    };
+
+    const handleToggleHigherInclusion = (inclusion) => {
+        setFormData(prev => {
+            const current = [...prev.selectedInclusions];
+            if (current.includes(inclusion)) {
+                current.splice(current.indexOf(inclusion), 1);
+            } else {
+                current.push(inclusion);
+            }
+            return { ...prev, selectedInclusions: current };
+        });
+    };
+
+    const handleToggleAddOn = (addOn) => {
+        setFormData(prev => {
+            const current = [...prev.selectedAddOns];
+            const existing = current.findIndex(a => a.id === addOn.id);
+            if (existing >= 0) {
+                current.splice(existing, 1);
+            } else {
+                const pricing = addOn.pricing[prev.region];
+                current.push({
+                    id: addOn.id,
+                    name: addOn.name,
+                    price: pricing?.min || 0,
+                });
+            }
+            return { ...prev, selectedAddOns: current };
+        });
+    };
 
     const handleFileUpload = async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
-
         setUploading(true);
         try {
-            const { uploadUrl, key } = await generateUploadUrl({
-                contentType: file.type,
-                fileName: file.name
-            });
-
-            await fetch(uploadUrl, {
-                method: "PUT",
-                headers: { "Content-Type": file.type },
-                body: file
-            });
-
-            setAttachedFiles(prev => [...prev, {
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-                storageKey: key,
-                isNewUpload: true // flag to know we need to save record
-            }]);
-
+            const { uploadUrl, key } = await generateUploadUrl({ contentType: file.type, fileName: file.name });
+            await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+            setAttachedFiles(prev => [...prev, { fileName: file.name, fileType: file.type, fileSize: file.size, storageKey: key, isNewUpload: true }]);
             toast.success("File uploaded ready to attach");
         } catch (error) {
             console.error(error);
@@ -132,11 +261,7 @@ export default function NewRequirement() {
     };
 
     const handleImportFile = async (file) => {
-        setAttachedFiles(prev => [...prev, {
-            ...file,
-            isImport: true, // flag to know we copy
-            originalFileId: file._id
-        }]);
+        setAttachedFiles(prev => [...prev, { ...file, isImport: true, originalFileId: file._id }]);
         toast.success(`Marked ${file.fileName} for import`);
     };
 
@@ -153,22 +278,13 @@ export default function NewRequirement() {
         if (!newItem.trim()) return;
         setFormData(prev => ({
             ...prev,
-            items: [...prev.items, {
-                id: crypto.randomUUID(), // Generate a client-side ID for list management
-                title: newItem,
-                description: "",
-                priority: "medium",
-                estimatedHours: 0
-            }]
+            items: [...prev.items, { id: Date.now().toString() + Math.random().toString(36).slice(2), title: newItem, description: "", priority: "medium", estimatedHours: 0 }]
         }));
         setNewItem("");
     };
 
     const handleRemoveItem = (index) => {
-        setFormData(prev => ({
-            ...prev,
-            items: prev.items.filter((_, i) => i !== index)
-        }));
+        setFormData(prev => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }));
     };
 
     const handleSubmit = async (e) => {
@@ -176,58 +292,55 @@ export default function NewRequirement() {
         setLoading(true);
 
         try {
-            if (!formData.projectId) {
-                toast.error("Please select a project first.");
+            if (!formData.clientId) {
+                toast.error("Please select a client first.");
+                setLoading(false);
+                return;
+            }
+
+            if (dealPriceError) {
+                toast.error(dealPriceError);
                 setLoading(false);
                 return;
             }
 
             let reqId;
+            const submitData = {
+                requirementName: formData.requirementName,
+                description: formData.description,
+                estimatedBudget: Number(formData.estimatedBudget) || 0,
+                estimatedHours: Number(formData.estimatedHours) || 0,
+                items: formData.items,
+                serviceType: formData.serviceType || undefined,
+                packageTier: formData.packageTier || undefined,
+                region: formData.region || undefined,
+                currency: formData.currency || undefined,
+                mrp: formData.mrp || undefined,
+                dealPrice: Number(formData.dealPrice) || undefined,
+                selectedInclusions: formData.selectedInclusions.length > 0 ? formData.selectedInclusions : undefined,
+                selectedAddOns: formData.selectedAddOns.length > 0 ? formData.selectedAddOns : undefined,
+            };
+
             if (isViewMode) {
-                await updateRequirement({
-                    requirementId: id,
-                    requirementName: formData.requirementName,
-                    description: formData.description,
-                    estimatedBudget: Number(formData.estimatedBudget) || 0,
-                    estimatedHours: Number(formData.estimatedHours) || 0,
-                    items: formData.items
-                });
+                await updateRequirement({ requirementId: id, ...submitData });
                 reqId = id;
             } else {
                 reqId = await createRequirement({
-                    requirementName: formData.requirementName,
-                    description: formData.description,
+                    ...submitData,
                     clientId: formData.clientId,
-                    projectId: formData.projectId,
+
                     salesPersonId: formData.salesPersonId,
-                    estimatedBudget: Number(formData.estimatedBudget) || 0,
-                    estimatedHours: Number(formData.estimatedHours) || 0,
-                    items: formData.items // Pass the sub-items
                 });
             }
 
-            // Process Attachments (only new uploads/imports)
+            // Process Attachments
             const newFiles = attachedFiles.filter(f => f.isNewUpload || f.isImport);
             if (newFiles.length > 0) {
                 await Promise.all(newFiles.map(async (file) => {
                     if (file.isNewUpload) {
-                        await saveFile({
-                            fileName: file.fileName,
-                            fileType: file.fileType,
-                            fileSize: file.fileSize,
-                            storageKey: file.storageKey,
-                            uploadedBy: currentUser.id,
-                            entityType: "requirement",
-                            entityId: reqId,
-                            description: "Requirement attachment"
-                        });
+                        await saveFile({ fileName: file.fileName, fileType: file.fileType, fileSize: file.fileSize, storageKey: file.storageKey, uploadedBy: currentUser.id, entityType: "requirement", entityId: reqId, description: "Requirement attachment" });
                     } else if (file.isImport) {
-                        await copyFileToEntity({
-                            fileId: file.originalFileId,
-                            targetEntityType: "requirement",
-                            targetEntityId: reqId,
-                            userId: currentUser.id
-                        });
+                        await copyFileToEntity({ fileId: file.originalFileId, targetEntityType: "requirement", targetEntityId: reqId, userId: currentUser.id });
                     }
                 }));
             }
@@ -241,6 +354,8 @@ export default function NewRequirement() {
             setLoading(false);
         }
     };
+
+    const isReadOnly = isViewMode && (currentUser.role !== 'admin' && currentUser.role !== 'superadmin' && currentUser.role !== 'sales');
 
     return (
         <div className="max-w-7xl mx-auto pb-20">
@@ -279,6 +394,65 @@ export default function NewRequirement() {
                         </div>
                     )}
 
+                    {/* Pricing Summary Card - Hidden for Employees */}
+                    {formData.serviceType && formData.packageTier && formData.mrp > 0 && (currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'sales') && (
+                        <div className="bg-linear-to-br from-slate-900 to-slate-800 p-6 rounded-3xl shadow-xl text-white">
+                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">
+                                <Package size={20} className="text-blue-400" />
+                                Pricing Summary
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-400 font-medium">Service</span>
+                                    <span className="font-bold">{SERVICE_TYPES.find(s => s.id === formData.serviceType)?.label}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-400 font-medium">Package</span>
+                                    <span className="font-bold capitalize">{currentTier?.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-400 font-medium">Region</span>
+                                    <span className="font-bold">{REGIONS.find(r => r.id === formData.region)?.flag} {REGIONS.find(r => r.id === formData.region)?.label}</span>
+                                </div>
+                                <div className="border-t border-slate-700 pt-3 mt-3">
+                                    {currentTier && (currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
+                                        <div className="flex justify-between items-center text-sm mb-2">
+                                            <span className="text-slate-400 font-medium">Price Range</span>
+                                            <span className="font-bold text-slate-300">
+                                                {formatPriceRange(currentTier.pricing[formData.region].min, currentTier.pricing[formData.region].max, formData.region)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-blue-400 font-bold text-sm">MRP (Fixed)</span>
+                                            <span className="text-2xl font-black text-blue-400">{formatPrice(formData.mrp, formData.region)}</span>
+                                        </div>
+                                    )}
+
+                                    {formData.dealPrice && !dealPriceError && (
+                                        <div className={`flex justify-between items-center ${(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') ? 'mt-2' : ''}`}>
+                                            <span className="text-green-400 font-bold text-sm">Deal Price</span>
+                                            <span className="text-2xl font-black text-green-400">{formatPrice(Number(formData.dealPrice), formData.region)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {formData.selectedAddOns.length > 0 && (
+                                    <div className="border-t border-slate-700 pt-3 mt-1">
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Add-Ons</span>
+                                        {formData.selectedAddOns.map(a => (
+                                            <div key={a.id} className="flex justify-between text-xs mt-1">
+                                                <span className="text-slate-400 truncate max-w-[150px]">{a.name}</span>
+                                                <span className="text-slate-300 font-bold">{a.price ? formatPrice(a.price, formData.region) : "—"}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm sticky top-6">
                         <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
                             <Video size={20} className="text-blue-500" />
@@ -287,15 +461,23 @@ export default function NewRequirement() {
                         <p className="text-xs text-slate-500 mb-6 font-medium">Use insights from recent or linked meetings to define requirements.</p>
 
                         <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                            {!contextMeetings && <div className="text-center py-10"><Loader2 className="animate-spin text-slate-400 mx-auto" /></div>}
-                            {contextMeetings?.length === 0 && <div className="text-slate-400 text-sm italic text-center">No relevant meetings found.</div>}
+                            {!formData.clientId && (
+                                <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                    <UsersIcon size={32} className="text-slate-300 mx-auto mb-2" />
+                                    <p className="text-sm text-slate-500 font-medium px-4">
+                                        Select a client first to see relevant meetings.
+                                    </p>
+                                </div>
+                            )}
+                            {formData.clientId && !contextMeetings && <div className="text-center py-10"><Loader2 className="animate-spin text-slate-400 mx-auto" /></div>}
+                            {formData.clientId && contextMeetings?.length === 0 && <div className="text-slate-400 text-sm italic text-center">No relevant meetings found for this client.</div>}
 
                             {contextMeetings?.map(meeting => (
                                 <MeetingContextCard
                                     key={meeting._id}
                                     meeting={meeting}
                                     onImportFile={handleImportFile}
-                                    disabled={isViewMode && currentUser.role === 'admin'}
+                                    disabled={isReadOnly}
                                 />
                             ))}
                         </div>
@@ -311,7 +493,7 @@ export default function NewRequirement() {
                                     {isViewMode ? "Requirement Details" : "New Requirement"}
                                 </h1>
                                 <p className="text-slate-500 font-medium">
-                                    {isViewMode ? `Viewing ${requirement?.requirementNumber || "Requirement"}` : "Define the requirements for a project."}
+                                    {isViewMode ? `Viewing ${requirement?.requirementNumber || "Requirement"}` : "Define the requirements for a client."}
                                 </p>
                             </div>
                             {isViewMode && (
@@ -324,22 +506,22 @@ export default function NewRequirement() {
                             )}
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} className="space-y-8">
                             {/* Basic Info */}
                             <div className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Project</label>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Client</label>
                                     <select
                                         required
                                         disabled={isViewMode}
-                                        value={formData.projectId}
-                                        onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                                        value={formData.clientId}
+                                        onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
                                         className="w-full p-4 rounded-2xl border border-slate-200 bg-white font-medium disabled:bg-slate-50 disabled:text-slate-500"
                                     >
-                                        <option value="">Select a Project</option>
-                                        {projects?.map(proj => (
-                                            <option key={proj._id} value={proj._id}>
-                                                {proj.projectName} ({proj.projectNumber})
+                                        <option value="">Select a Client</option>
+                                        {clients?.map(client => (
+                                            <option key={client._id} value={client._id}>
+                                                {client.companyName} ({client.contactPerson})
                                             </option>
                                         ))}
                                     </select>
@@ -349,7 +531,7 @@ export default function NewRequirement() {
                                     <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Requirement Title</label>
                                     <input
                                         required
-                                        disabled={isViewMode && currentUser.role === 'admin'}
+                                        disabled={isReadOnly}
                                         value={formData.requirementName}
                                         onChange={(e) => setFormData({ ...formData, requirementName: e.target.value })}
                                         className="w-full p-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20 bg-slate-50 font-bold text-lg disabled:bg-slate-100 disabled:text-slate-600"
@@ -360,19 +542,300 @@ export default function NewRequirement() {
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Detailed Description</label>
                                     <textarea
-                                        disabled={isViewMode && currentUser.role === 'admin'}
+                                        disabled={isReadOnly}
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        rows="5"
+                                        rows="4"
                                         className="w-full p-4 rounded-2xl border border-slate-200 bg-white disabled:bg-slate-50 disabled:text-slate-500"
                                         placeholder="Describe the functional and non-functional requirements..."
                                     />
                                 </div>
                             </div>
 
+                            {/* ─── SERVICE TYPE SELECTION ─── */}
+                            <div className="pt-6 border-t border-slate-100">
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                                    Select Service Type
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {SERVICE_TYPES.map((service) => {
+                                        const IconComp = SERVICE_ICONS[service.icon] || Globe;
+                                        const isActive = formData.serviceType === service.id;
+                                        return (
+                                            <button
+                                                key={service.id}
+                                                type="button"
+                                                disabled={isReadOnly}
+                                                onClick={() => handleServiceTypeSelect(service.id)}
+                                                className={`p-4 rounded-2xl border-2 text-left transition-all group ${isActive
+                                                    ? "border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 shadow-lg shadow-blue-100"
+                                                    : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
+                                                    } disabled:opacity-60`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isActive ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600"} transition-colors`}>
+                                                        <IconComp size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <div className={`font-bold text-sm ${isActive ? "text-blue-700" : "text-slate-700"}`}>{service.label}</div>
+                                                        <div className="text-[11px] text-slate-400 font-medium">{service.description}</div>
+                                                    </div>
+                                                    {isActive && (
+                                                        <div className="ml-auto">
+                                                            <Check size={18} className="text-blue-600" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* ─── REGION SELECTOR ─── */}
+                            {formData.serviceType && (
+                                <div className="pt-4">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
+                                        Client Region
+                                    </label>
+                                    <div className="flex gap-2">
+                                        {REGIONS.map(reg => (
+                                            <button
+                                                key={reg.id}
+                                                type="button"
+                                                disabled={isReadOnly}
+                                                onClick={() => handleRegionChange(reg.id)}
+                                                className={`flex-1 py-3 px-4 rounded-xl border-2 font-bold text-sm text-center transition-all ${formData.region === reg.id
+                                                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                                                    : "border-slate-200 bg-white text-slate-600 hover:border-blue-300"
+                                                    }`}
+                                            >
+                                                <span className="text-lg mr-1">{reg.flag}</span> {reg.label} ({reg.currency})
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ─── PACKAGE TIER SELECTION ─── */}
+                            {formData.serviceType && currentServicePkg && (
+                                <div className="pt-4">
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">
+                                        Select Package Tier
+                                    </label>
+                                    <div className="grid grid-cols-1 gap-4">
+                                        {currentServicePkg.tiers.map((tier, idx) => {
+                                            const colors = TIER_COLORS[idx % TIER_COLORS.length];
+                                            const TierIcon = colors.icon;
+                                            const pricing = tier.pricing[formData.region];
+                                            const isActive = formData.packageTier === tier.id;
+
+                                            return (
+                                                <button
+                                                    key={tier.id}
+                                                    type="button"
+                                                    disabled={isReadOnly}
+                                                    onClick={() => handleTierSelect(tier.id)}
+                                                    className={`p-5 rounded-2xl border-2 text-left transition-all ${isActive
+                                                        ? `${colors.border} ${colors.bg} ring-2 ${colors.ring}/20 shadow-lg`
+                                                        : "border-slate-200 bg-white hover:border-slate-300"
+                                                        } disabled:opacity-60`}
+                                                >
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br ${colors.gradient} text-white shadow-md`}>
+                                                                <TierIcon size={18} />
+                                                            </div>
+                                                            <div>
+                                                                <div className={`font-black text-lg ${isActive ? colors.text : "text-slate-800"}`}>{tier.name}</div>
+                                                                {tier.platforms && <div className="text-[11px] text-slate-400 font-medium">{tier.platforms}</div>}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Range</div>
+                                                            <div className={`font-bold text-sm ${isActive ? colors.text : "text-slate-600"}`}>
+                                                                {pricing ? formatPriceRange(pricing.min, pricing.max, formData.region) : "—"}
+                                                            </div>
+                                                            {pricing?.mrp && (
+                                                                <div className={`font-black text-lg mt-0.5 ${isActive ? colors.text : "text-slate-800"}`}>
+                                                                    MRP: {formatPrice(pricing.mrp, formData.region)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Preview inclusions when active */}
+                                                    {isActive && (
+                                                        <div className="mt-3 pt-3 border-t border-slate-200/50">
+                                                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Included in this tier</div>
+                                                            <div className="grid grid-cols-1 gap-1">
+                                                                {tier.inclusions.map((inc, i) => (
+                                                                    <div key={i} className="flex items-start gap-2 text-xs">
+                                                                        <Check size={12} className={`${colors.text} mt-0.5 shrink-0`} />
+                                                                        <span className="text-slate-600 font-medium">{inc}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ─── HIGHER TIER INCLUSIONS (add more) ─── */}
+                            {currentTier && higherTierInclusions.length > 0 && (
+                                <div className="pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowHigherInclusions(!showHigherInclusions)}
+                                        className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-700 transition-colors mb-3"
+                                    >
+                                        <Sparkles size={16} />
+                                        Add Inclusions from Higher Tiers ({higherTierInclusions.length} available)
+                                        {showHigherInclusions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
+
+                                    {showHigherInclusions && (
+                                        <div className="bg-purple-50/50 rounded-2xl border border-purple-100 p-4 space-y-2 animate-in fade-in slide-in-from-top-2">
+                                            <p className="text-[11px] text-purple-500 font-medium mb-3">
+                                                These features are from higher tiers. Add them to customize your package.
+                                            </p>
+                                            {higherTierInclusions.map((inc, i) => {
+                                                const isSelected = formData.selectedInclusions.includes(inc);
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        disabled={isReadOnly}
+                                                        onClick={() => handleToggleHigherInclusion(inc)}
+                                                        className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all text-sm ${isSelected
+                                                            ? "bg-purple-100 border border-purple-200 text-purple-700"
+                                                            : "bg-white border border-slate-100 text-slate-600 hover:border-purple-200 hover:bg-purple-50"
+                                                            }`}
+                                                    >
+                                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isSelected
+                                                            ? "bg-purple-600 text-white"
+                                                            : "border-2 border-slate-300"
+                                                            }`}>
+                                                            {isSelected && <Check size={12} />}
+                                                        </div>
+                                                        <span className="font-medium">{inc}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ─── ADD-ONS ─── */}
+                            {currentTier && availableAddOns.length > 0 && (
+                                <div className="pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddOns(!showAddOns)}
+                                        className="flex items-center gap-2 text-sm font-bold text-amber-600 hover:text-amber-700 transition-colors mb-3"
+                                    >
+                                        <Plus size={16} />
+                                        Add-Ons ({availableAddOns.length} available)
+                                        {showAddOns ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
+
+                                    {showAddOns && (
+                                        <div className="bg-amber-50/50 rounded-2xl border border-amber-100 p-4 space-y-2 animate-in fade-in slide-in-from-top-2">
+                                            {availableAddOns.map((addOn) => {
+                                                const isSelected = formData.selectedAddOns.some(a => a.id === addOn.id);
+                                                const pricing = addOn.pricing[formData.region];
+                                                return (
+                                                    <button
+                                                        key={addOn.id}
+                                                        type="button"
+                                                        disabled={isReadOnly}
+                                                        onClick={() => handleToggleAddOn(addOn)}
+                                                        className={`w-full flex items-center justify-between gap-3 p-4 rounded-xl text-left transition-all ${isSelected
+                                                            ? "bg-amber-100 border border-amber-200"
+                                                            : "bg-white border border-slate-100 hover:border-amber-200 hover:bg-amber-50"
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${isSelected
+                                                                ? "bg-amber-600 text-white"
+                                                                : "border-2 border-slate-300"
+                                                                }`}>
+                                                                {isSelected && <Check size={12} />}
+                                                            </div>
+                                                            <div>
+                                                                <div className={`font-bold text-sm ${isSelected ? "text-amber-700" : "text-slate-700"}`}>{addOn.name}</div>
+                                                                <div className="text-[11px] text-slate-400 font-medium mt-0.5">
+                                                                    {addOn.inclusions.slice(0, 2).join(" • ")}
+                                                                    {addOn.inclusions.length > 2 && ` +${addOn.inclusions.length - 2} more`}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {pricing && (
+                                                            <div className="text-right shrink-0">
+                                                                <div className={`font-bold text-sm ${isSelected ? "text-amber-700" : "text-slate-600"}`}>
+                                                                    {formatPriceRange(pricing.min, pricing.max, formData.region)}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-400 font-medium">per month</div>
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* ─── DEAL PRICE ─── Hidden for Employees */}
+                            {currentTier && formData.mrp > 0 && (currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'sales') && (
+                                <div className="pt-6 border-t border-slate-100">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                                                    MRP (Fixed)
+                                                </label>
+                                                <div className="w-full p-4 rounded-2xl border border-blue-200 bg-blue-50 font-black text-xl text-blue-700">
+                                                    {formatPrice(formData.mrp, formData.region)}
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 mt-1 font-medium">Auto-calculated from selected package & region</p>
+                                            </div>
+                                        )}
+                                        <div className={(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') ? '' : 'col-span-2'}>
+                                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
+                                                Deal Price ({formData.currency})
+                                            </label>
+                                            <input
+                                                type="number"
+                                                disabled={isReadOnly}
+                                                value={formData.dealPrice}
+                                                onChange={(e) => setFormData({ ...formData, dealPrice: e.target.value })}
+                                                className={`w-full p-4 rounded-2xl border font-bold text-lg disabled:bg-slate-50 ${dealPriceError ? "border-red-300 bg-red-50 text-red-700 focus:ring-red-500/20" : "border-slate-200 bg-white focus:ring-2 focus:ring-green-500/20"
+                                                    }`}
+                                                placeholder={`Min ${formatPrice(formData.mrp, formData.region)}`}
+                                            />
+                                            {dealPriceError && (
+                                                <div className="flex items-center gap-1.5 mt-2 text-red-600 text-xs font-bold">
+                                                    <AlertCircle size={14} />
+                                                    {dealPriceError}
+                                                </div>
+                                            )}
+                                            {(currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'superadmin') && (
+                                                <p className="text-[11px] text-slate-400 mt-1 font-medium">Cannot be lower than MRP</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Items Section */}
                             <div className="pt-4 border-t border-slate-100">
-                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Requirement Items (Tasks)</label>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Additional Notes / Sub-Tasks</label>
 
                                 <div className="space-y-2 mb-3">
                                     {formData.items.length === 0 && <div className="text-xs text-slate-400 italic">No items added yet.</div>}
@@ -380,7 +843,7 @@ export default function NewRequirement() {
                                         <div key={idx} className="flex items-center gap-2 text-sm bg-slate-50 p-3 rounded-xl border border-slate-100 group hover:border-blue-200 transition-colors">
                                             <div className="w-2 h-2 rounded-full bg-blue-400"></div>
                                             <span className="flex-1 font-bold text-slate-700">{item.title}</span>
-                                            {!(isViewMode && currentUser.role === 'admin') && (
+                                            {!isReadOnly && (
                                                 <button
                                                     type="button"
                                                     onClick={() => handleRemoveItem(idx)}
@@ -393,14 +856,14 @@ export default function NewRequirement() {
                                     ))}
                                 </div>
 
-                                {!(isViewMode && currentUser.role === 'admin') && (
+                                {!isReadOnly && (
                                     <div className="flex items-center gap-2">
                                         <input
                                             value={newItem}
                                             onChange={(e) => setNewItem(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddItem())}
                                             className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium placeholder:text-slate-400"
-                                            placeholder="Add a sub-task or item..."
+                                            placeholder="Add a note or sub-task..."
                                         />
                                         <button
                                             type="button"
@@ -417,7 +880,7 @@ export default function NewRequirement() {
                             <div className="pt-4 border-t border-slate-100">
                                 <div className="flex items-center justify-between mb-4">
                                     <label className="block text-xs font-bold uppercase tracking-widest text-slate-500">Attachments</label>
-                                    {!(isViewMode && currentUser.role === 'admin') && (
+                                    {!isReadOnly && (
                                         <label className="cursor-pointer text-blue-600 hover:text-blue-700 transition-colors bg-blue-50 px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1">
                                             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                                             Upload File
@@ -433,7 +896,6 @@ export default function NewRequirement() {
 
                                 {((existingFiles && existingFiles.length > 0) || attachedFiles.length > 0) && (
                                     <div className="space-y-3 mb-4">
-                                        {/* Existing Files */}
                                         {existingFiles?.map((file) => (
                                             <div key={file._id} className="flex items-center justify-between bg-blue-50/50 p-3 rounded-xl border border-blue-100 text-sm">
                                                 <div className="flex items-center gap-2">
@@ -454,7 +916,6 @@ export default function NewRequirement() {
                                             </div>
                                         ))}
 
-                                        {/* New/Pending Files */}
                                         {attachedFiles.map((file, idx) => (
                                             <div key={idx} className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-100 text-sm">
                                                 <div className="flex items-center gap-2">
@@ -467,7 +928,7 @@ export default function NewRequirement() {
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    disabled={isViewMode && currentUser.role === 'admin'}
+                                                    disabled={isReadOnly}
                                                     onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
                                                     className="text-slate-400 hover:text-red-500 disabled:opacity-0"
                                                 >
@@ -479,24 +940,13 @@ export default function NewRequirement() {
                                 )}
                             </div>
 
+                            {/* Estimated Hours (keep existing) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Est. Budget ($)</label>
-                                    <input
-                                        type="number"
-                                        disabled={isViewMode && currentUser.role === 'admin'}
-                                        value={formData.estimatedBudget}
-                                        onChange={(e) => setFormData({ ...formData, estimatedBudget: e.target.value })}
-                                        className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm font-medium disabled:bg-slate-50"
-                                        placeholder="0.00"
-                                    />
-                                </div>
-
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Est. Hours</label>
                                     <input
                                         type="number"
-                                        disabled={isViewMode && currentUser.role === 'admin'}
+                                        disabled={isReadOnly}
                                         value={formData.estimatedHours}
                                         onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                                         className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm font-medium disabled:bg-slate-50"
@@ -505,7 +955,7 @@ export default function NewRequirement() {
                                 </div>
                             </div>
 
-                            {!(isViewMode && currentUser.role === 'admin') && (
+                            {!isReadOnly && (
                                 <div className="pt-6 border-t border-slate-100 flex justify-end">
                                     <button
                                         type="submit"
@@ -576,8 +1026,8 @@ function MeetingContextCard({ meeting, onImportFile }) {
                                         <span className="font-bold text-slate-700 text-[10px] uppercase">{outcome.role}</span>
                                         {outcome.sentiment && (
                                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${outcome.sentiment === 'positive' ? 'bg-green-100 text-green-700' :
-                                                    outcome.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
-                                                        'bg-slate-100 text-slate-600'
+                                                outcome.sentiment === 'negative' ? 'bg-red-100 text-red-700' :
+                                                    'bg-slate-100 text-slate-600'
                                                 }`}>
                                                 {outcome.sentiment}
                                             </span>
