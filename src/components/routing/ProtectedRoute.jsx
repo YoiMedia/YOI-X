@@ -1,12 +1,9 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ component: Component, allowedRoles, userRole }) => {
-    const location = useLocation();
-
+    // Not logged in → always land on the landing page
     if (!userRole) {
-        // Determine where to redirect based on path
-        const isSuperadminPath = location.pathname.startsWith("/users") || location.pathname.includes("superadmin");
-        return <Navigate to={isSuperadminPath ? "/auth/login-superadmin" : "/auth/login"} state={{ from: location }} replace />;
+        return <Navigate to="/landing" replace />;
     }
 
     if (allowedRoles && !allowedRoles.includes(userRole)) {

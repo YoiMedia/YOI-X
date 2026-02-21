@@ -62,6 +62,7 @@ export const superadminMenu = [
         subtitle: "Global configuration",
     },
     { label: "Leads", icon: Headset, link: "/leads" },
+    { label: "Services", icon: Briefcase, link: "/services" },
 ];
 
 // ==================== ADMIN MENU ====================
@@ -76,6 +77,7 @@ export const adminMenu = [
     { label: "Approvals", icon: ClipboardCheck, link: "/approvals-queue" },
     { label: "Settings", icon: Settings, link: "/settings" },
     { label: "Leads", icon: Headset, link: "/leads" },
+    { label: "Services", icon: Briefcase, link: "/services" },
 
 ];
 
@@ -94,14 +96,14 @@ export const employeeMenu = [
 export const salesMenu = [
     { label: "Dashboard", icon: LayoutDashboard, link: "/" },
     { label: "Clients", icon: Users, link: "/clients" },
-    { label: "Documents", icon: FileText, link: "/proposals" },
+    { label: "Documents", icon: FileText, link: "/documents" },
     { label: "Meetings", icon: Calendar, link: "/meetings" },
     { label: "Requirements", icon: FolderKanban, link: "/requirements" },
     { label: "Queries", icon: MessageCircle, link: "/queries" },
     { label: "Submissions Review", icon: Archive, link: "/submissions" },
-    { label: "Analytics", icon: FolderKanban, link: "/analytics" },
     { label: "Settings", icon: Settings, link: "/settings" },
     { label: "Leads", icon: Headset, link: "/leads" },
+    { label: "Services", icon: Briefcase, link: "/services" },
 ];
 
 // ==================== CLIENT MENU ====================

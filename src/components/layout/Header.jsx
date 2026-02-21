@@ -66,84 +66,81 @@ export default function Header({ onMenuClick }) {
     };
 
     return (
-        <header className="min-h-[64px] bg-card-bg border-b border-border-accent flex items-center justify-between px-4 sm:px-6 sticky top-0 z-20">
+        <header className="min-h-[80px] bg-header-bg border-b border-primary/10 flex items-center justify-between px-6 sm:px-10 sticky top-0 z-20">
             {/* LEFT */}
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-4 min-w-0">
                 <button
                     onClick={onMenuClick}
-                    className="lg:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-600"
+                    className="lg:hidden p-2.5 hover:bg-white/50 rounded-xl transition-all text-secondary"
                 >
-                    <Menu size={20} />
+                    <Menu size={22} />
                 </button>
 
                 <div>
-                    <h1 className="text-base sm:text-lg font-black font-primary text-secondary truncate max-w-[200px] sm:max-w-none">
+                    <h1 className="text-xl sm:text-2xl font-black font-primary text-secondary tracking-tight truncate max-w-[200px] sm:max-w-none leading-none">
                         {getPageInfo.title}
                     </h1>
-                    <p className="text-xs text-text-secondary truncate max-w-[200px] sm:max-w-none">
-                        {getPageInfo.subtitle}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1.5 focus-within:ring-0">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        <p className="text-[11px] font-bold text-text-secondary uppercase tracking-widest truncate max-w-[200px] sm:max-w-none">
+                            {getPageInfo.subtitle}
+                        </p>
+                    </div>
                 </div>
             </div>
 
             {/* RIGHT */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-6">
                 {/* Search */}
-                <div className="relative hidden md:block">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <div className="relative hidden lg:block group">
+                    <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary group-focus-within:text-primary transition-colors" />
                     <input
                         type="text"
-                        placeholder="Search..."
+                        placeholder="Search workspace..."
                         value={searchValue}
                         onChange={(e) => setSearchValue(e.target.value)}
-                        className="w-64 pl-9 pr-4 py-2 bg-alt-bg border border-border-accent rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
+                        className="w-72 pl-11 pr-4 py-3 bg-white/60 border border-primary/5 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 text-sm font-medium placeholder:text-text-secondary/50 transition-all"
                     />
-                    {searchValue && (
-                        <button
-                            onClick={() => setSearchValue("")}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                            <X size={14} />
-                        </button>
-                    )}
                 </div>
 
                 {/* Notifications */}
-                <button className="relative p-2 hover:bg-alt-bg rounded-lg text-text-secondary">
-                    <Bell size={18} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-card-bg" />
+                <button className="relative p-3 hover:bg-white/50 rounded-2xl text-secondary transition-all shadow-sm hover:shadow-md">
+                    <Bell size={20} />
+                    <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-primary rounded-full border-2 border-header-bg shadow-sm" />
                 </button>
 
                 {/* USER PROFILE */}
                 <div className="relative">
                     <button
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="flex items-center gap-2.5 pl-3 pr-2 py-1 border-l border-border-accent hover:bg-alt-bg transition-colors rounded-lg"
+                        className="flex items-center gap-3 pl-4 pr-1.5 py-1.5 bg-white/40 border border-primary/5 hover:bg-white/60 transition-all rounded-2xl shadow-sm hover:shadow-md"
                     >
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-sm">
-                            <User size={16} className="text-white" />
+                        <div className="hidden md:block text-right">
+                            <p className="text-sm font-black text-secondary leading-none">{user.name}</p>
+                            <p className="text-[9px] text-primary uppercase tracking-widest font-black mt-1 leading-none">{user?.role}</p>
                         </div>
-                        <div className="hidden md:block text-left">
-                            <p className="text-sm font-bold text-secondary">{user.name}</p>
-                            <p className="text-[10px] text-text-secondary uppercase tracking-wider font-bold">{user?.role}</p>
+                        <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center shadow-lg shadow-secondary/10 group overflow-hidden">
+                            <User size={18} className="text-primary group-hover:scale-110 transition-transform" />
                         </div>
                     </button>
 
                     {showProfileMenu && (
                         <>
                             <div className="fixed inset-0 z-30" onClick={() => setShowProfileMenu(false)} />
-                            <div className="absolute right-0 mt-2 w-48 bg-card-bg rounded-xl shadow-xl border border-border-accent overflow-hidden z-40 animate-in fade-in zoom-in duration-200">
-                                <div className="px-4 py-3 border-b border-border-accent bg-alt-bg/50">
-                                    <p className="text-sm font-bold text-secondary">{user.name}</p>
-                                    <p className="text-xs text-text-secondary truncate">{user.email}</p>
+                            <div className="absolute right-0 mt-3 w-56 bg-white rounded-3xl shadow-2xl border border-primary/5 overflow-hidden z-40 animate-in fade-in zoom-in slide-in-from-top-2 duration-300">
+                                <div className="px-5 py-5 border-b border-main-bg bg-header-bg/30">
+                                    <p className="text-sm font-black text-secondary">{user.name}</p>
+                                    <p className="text-[11px] font-bold text-text-secondary truncate mt-0.5">{user.email}</p>
                                 </div>
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-error hover:bg-error/5 transition-colors"
-                                >
-                                    <LogOut size={16} />
-                                    <span>Sign out</span>
-                                </button>
+                                <div className="p-2">
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-error hover:bg-error/5 rounded-xl transition-all"
+                                    >
+                                        <LogOut size={18} />
+                                        <span>Sign out</span>
+                                    </button>
+                                </div>
                             </div>
                         </>
                     )}

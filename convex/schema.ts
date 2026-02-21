@@ -7,10 +7,18 @@ export default defineSchema({
     // ============================================
     users: defineTable({
         fullName: v.string(),
-        username: v.string(),
+        username: v.optional(v.string()),
         email: v.string(),
-        phone: v.string(),
+        phone: v.optional(v.string()),
         alternatePhone: v.optional(v.string()),
+        phoneNumbers: v.optional(
+            v.array(
+                v.object({
+                    number: v.string(),
+                    label: v.string(),
+                })
+            )
+        ),
         passwordHash: v.optional(v.string()), // Use auth provider instead when possible
         role: v.union(
             v.literal("superadmin"),
@@ -30,6 +38,7 @@ export default defineSchema({
             })
         ),
         profileImage: v.optional(v.string()),
+        profileCompleted: v.optional(v.boolean()),
         isActive: v.boolean(),
         createdBy: v.optional(v.id("users")),
         lastLogin: v.optional(v.number()),
@@ -382,6 +391,7 @@ export default defineSchema({
             v.literal("contract"),
             v.literal("nda"),
             v.literal("invoice"),
+            v.literal("onboarding"),
             v.literal("agreement"),
             v.literal("other")
         ),
@@ -650,6 +660,8 @@ export default defineSchema({
                 })
             )
         ),
+        // External attendees (email only, not in the system)
+        externalAttendees: v.optional(v.array(v.string())),
         // Relations
         clientId: v.optional(v.id("clients")),
         requirementId: v.optional(v.id("requirements")),
@@ -966,6 +978,7 @@ export default defineSchema({
             v.literal("interested"),
             v.literal("not-interested"),
             v.literal("follow-up"),
+            v.literal("pitched"),
             v.literal("converted"),
             v.literal("lost")
         ),
@@ -974,12 +987,37 @@ export default defineSchema({
         convertedClientId: v.optional(v.id("clients")),
         convertedAt: v.optional(v.number()),
 
+        // Selection of services/packages pitched during sales lifecycle
+        pitchedServices: v.optional(
+            v.array(
+                v.object({
+                    serviceId: v.string(),
+                    packageId: v.string(),
+                    packageName: v.string(),
+                    region: v.string(),
+                    price: v.number(),
+                })
+            )
+        ),
+
         // Import tracking
         importBatchId: v.optional(v.string()), // UUID/timestamp grouping same CSV import
         importedBy: v.id("users"),
 
         // General notes
         notes: v.optional(v.string()),
+        contactCount: v.optional(v.number()),
+        lastContactedAt: v.optional(v.number()),
+        contactHistory: v.optional(
+            v.array(
+                v.object({
+                    timestamp: v.number(),
+                    type: v.union(v.literal("called"), v.literal("whatsapp"), v.literal("emailed")),
+                    note: v.optional(v.string()),
+                    salesPersonId: v.id("users"),
+                })
+            )
+        ),
 
         // Soft delete
         isDeleted: v.optional(v.boolean()),
@@ -1012,6 +1050,7 @@ export default defineSchema({
             v.literal("interested"),
             v.literal("not-interested"),
             v.literal("follow-up"),
+            v.literal("pitched"),
             v.literal("converted"),
             v.literal("lost")
         ),

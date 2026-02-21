@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useNavigate } from "react-router-dom";
+import { getUser } from "../../services/auth.service";
+import toast from "react-hot-toast";
 import {
     Users,
     UserPlus,
@@ -14,15 +16,48 @@ import {
     BadgeCheck,
     UserCog,
     Loader2,
-    Plus
+    Plus,
+    KeyRound,
+    X,
+    ShieldAlert
 } from "lucide-react";
 
 export default function UserList() {
     const navigate = useNavigate();
+    const currentUser = getUser();
+    const isSuperadmin = currentUser?.role === "superadmin";
+
     const [filterRole, setFilterRole] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
+    const [resettingUser, setResettingUser] = useState(null);
+    const [newPassword, setNewPassword] = useState("");
+    const [isResetting, setIsResetting] = useState(false);
 
     const users = useQuery(api.users.listUsers);
+    const resetPassword = useAction(api.users.resetUserPassword);
+
+    const handleResetPassword = async (e) => {
+        e.preventDefault();
+        if (!newPassword || newPassword.length < 4) {
+            return toast.error("Password must be at least 4 characters.");
+        }
+
+        setIsResetting(true);
+        try {
+            await resetPassword({
+                superadminId: currentUser.id,
+                targetUserId: resettingUser._id,
+                newPassword: newPassword
+            });
+            toast.success(`Password reset successfully for ${resettingUser.fullName}`);
+            setResettingUser(null);
+            setNewPassword("");
+        } catch (error) {
+            toast.error(error.message || "Failed to reset password");
+        } finally {
+            setIsResetting(false);
+        }
+    };
 
     const filteredUsers = users?.filter(user => {
         const matchesRole = filterRole === "all" || user.role === filterRole;
@@ -175,9 +210,20 @@ export default function UserList() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 text-right">
-                                            <button className="p-2 text-text-secondary/40 hover:text-primary hover:bg-alt-bg rounded-xl transition-all opacity-0 group-hover:opacity-100">
-                                                <MoreHorizontal size={20} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {isSuperadmin && user.role !== "superadmin" && (
+                                                    <button
+                                                        onClick={() => setResettingUser(user)}
+                                                        className="p-2 text-text-secondary/40 hover:text-primary hover:bg-alt-bg rounded-xl transition-all"
+                                                        title="Reset Password"
+                                                    >
+                                                        <KeyRound size={18} />
+                                                    </button>
+                                                )}
+                                                <button className="p-2 text-text-secondary/40 hover:text-primary hover:bg-alt-bg rounded-xl transition-all">
+                                                    <MoreHorizontal size={20} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -187,11 +233,84 @@ export default function UserList() {
                 )}
             </div>
 
-            {/* Footer Stats */}
-            {users && filteredUsers.length > 0 && (
-                <div className="flex items-center justify-between text-sm font-bold text-text-secondary bg-alt-bg/30 p-6 rounded-3xl border border-border-accent">
-                    <span className="uppercase tracking-widest text-[10px] font-black">Showing {filteredUsers.length} of {users.length} System Users</span>
-                    <button className="text-primary hover:text-primary-dark transition-colors uppercase tracking-widest text-[10px] font-black">Export Records</button>
+            {/* Password Reset Modal */}
+            {resettingUser && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/20 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-md rounded-4xl shadow-2xl border border-border-accent overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="bg-alt-bg/50 px-8 py-6 border-b border-border-accent flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                                    <KeyRound size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-secondary font-primary leading-none">Reset Password</h3>
+                                    <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest mt-1">Force Access Credential Update</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setResettingUser(null)}
+                                className="p-2 hover:bg-white rounded-xl text-text-secondary transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleResetPassword} className="p-8 space-y-6">
+                            <div className="bg-header-bg/50 p-4 rounded-2xl border border-primary/5 flex items-center gap-4">
+                                <div className="w-10 h-10 bg-secondary rounded-xl flex items-center justify-center text-primary font-black shadow-sm">
+                                    {resettingUser.fullName.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Target User</p>
+                                    <p className="text-sm font-black text-secondary">{resettingUser.fullName}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 text-center p-4 bg-error/5 rounded-2xl border border-error/10">
+                                <ShieldAlert size={24} className="text-error mx-auto opacity-50" />
+                                <p className="text-[11px] font-bold text-error/80 leading-relaxed uppercase tracking-wider">
+                                    This will immediately overwrite the existing password. The user will need this new credential for their next login.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">New System Password</label>
+                                <div className="relative">
+                                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/30" size={18} />
+                                    <input
+                                        type="text"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        placeholder="Enter new strong password"
+                                        className="w-full pl-12 pr-4 py-4 rounded-2xl border border-border-accent bg-alt-bg/30 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-black text-sm text-secondary"
+                                        required
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setResettingUser(null)}
+                                    className="flex-1 py-4 rounded-2xl border border-border-accent text-[10px] font-black text-text-secondary uppercase tracking-widest hover:bg-alt-bg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isResetting}
+                                    className="flex-1 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isResetting ? (
+                                        <Loader2 size={16} className="animate-spin" />
+                                    ) : (
+                                        <>Confirm Reset</>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>

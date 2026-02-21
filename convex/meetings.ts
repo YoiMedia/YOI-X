@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc } from "./_generated/dataModel";
 
@@ -107,6 +107,7 @@ export const scheduleMeeting = mutation({
                 })
             )
         ),
+        externalAttendees: v.optional(v.array(v.string())),
     },
     handler: async (ctx, args) => {
         return await ctx.db.insert("meetings", {
@@ -162,6 +163,15 @@ export const updateMeeting = mutation({
         scheduledAt: v.optional(v.number()),
         duration: v.optional(v.number()),
         agenda: v.optional(v.string()),
+        attendees: v.optional(
+            v.array(
+                v.object({
+                    userId: v.id("users"),
+                    status: v.union(v.literal("invited"), v.literal("accepted"), v.literal("declined"), v.literal("tentative")),
+                })
+            )
+        ),
+        externalAttendees: v.optional(v.array(v.string())),
     },
     handler: async (ctx, args) => {
         const { meetingId, ...updateData } = args;
@@ -182,6 +192,28 @@ export const getStaff = query({
             u.isActive
         );
     }
+});
+
+export const updateAttendees = mutation({
+    args: {
+        meetingId: v.id("meetings"),
+        attendees: v.optional(
+            v.array(
+                v.object({
+                    userId: v.id("users"),
+                    status: v.union(v.literal("invited"), v.literal("accepted"), v.literal("declined"), v.literal("tentative")),
+                })
+            )
+        ),
+        externalAttendees: v.optional(v.array(v.string())),
+    },
+    handler: async (ctx, args) => {
+        const { meetingId, ...data } = args;
+        await ctx.db.patch(meetingId, {
+            ...data,
+            updatedAt: Date.now(),
+        });
+    },
 });
 
 
@@ -258,4 +290,40 @@ export const getContextMeetings = query({
             })
         );
     }
+});
+
+export const generateMeetLink = action({
+    args: {
+        title: v.string(),
+        description: v.optional(v.string()),
+        scheduledAt: v.number(),
+        duration: v.number(),
+        attendeeEmails: v.array(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const response = await fetch("https://n8n.yoimedia.fun/webhook/meet/gen", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                title: args.title,
+                description: args.description || "",
+                startTime: new Date(args.scheduledAt).toISOString(),
+                endTime: new Date(args.scheduledAt + args.duration * 60000).toISOString(),
+                attendees: args.attendeeEmails,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to generate Meet link: ${errorText}`);
+        }
+
+        const data = await response.json();
+        // Adjust based on expected webhook response format. 
+        // Assuming it returns { meetLink: "..." } or similar.
+        // If it returns just the string, data might be different.
+        return data.meetLink || data.url || data.link || (typeof data === 'string' ? data : null);
+    },
 });

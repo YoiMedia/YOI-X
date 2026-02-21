@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { getUser } from "../../services/auth.service";
 import {
@@ -24,10 +24,12 @@ export default function MeetingList() {
     const clients = useQuery(api.clients.listClients);
     const staff = useQuery(api.meetings.getStaff);
     const scheduleMeeting = useMutation(api.meetings.scheduleMeeting);
+    const generateMeetLink = useAction(api.meetings.generateMeetLink);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -39,8 +41,12 @@ export default function MeetingList() {
         clientId: "",
         requirementId: "",
         attendees: [],
+        externalAttendees: [],
         description: "",
     });
+
+    // Input for adding a new external email
+    const [externalEmailInput, setExternalEmailInput] = useState("");
 
 
     const selectedRequirements = useQuery(
@@ -69,6 +75,63 @@ export default function MeetingList() {
         });
     };
 
+    const addExternalEmail = () => {
+        const email = externalEmailInput.trim().toLowerCase();
+        if (!email) return;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+        if (formData.externalAttendees.includes(email)) {
+            toast.error("This email is already added");
+            return;
+        }
+        setFormData(prev => ({ ...prev, externalAttendees: [...prev.externalAttendees, email] }));
+        setExternalEmailInput("");
+    };
+
+    const removeExternalEmail = (email) => {
+        setFormData(prev => ({ ...prev, externalAttendees: prev.externalAttendees.filter(e => e !== email) }));
+    };
+
+    const handleGenerateLink = async () => {
+        if (!formData.title || !formData.scheduledAt) {
+            toast.error("Please fill title and date first");
+            return;
+        }
+
+        setIsGenerating(true);
+        try {
+            // Get attendee emails from internal staff
+            const internalEmails = formData.attendees.map(a => {
+                const person = staff.find(s => s._id === a.userId);
+                return person ? person.email : null;
+            }).filter(Boolean);
+
+            // Merge with external emails
+            const attendeeEmails = [...internalEmails, ...formData.externalAttendees];
+
+            const link = await generateMeetLink({
+                title: formData.title,
+                description: formData.description,
+                scheduledAt: new Date(formData.scheduledAt).getTime(),
+                duration: formData.duration,
+                attendeeEmails
+            });
+
+            if (link) {
+                setFormData(prev => ({ ...prev, location: link }));
+                toast.success("Meet link generated!");
+            } else {
+                toast.error("Generated link was empty. Please check n8n.");
+            }
+        } catch (error) {
+            toast.error(error.message || "Failed to generate link");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -77,9 +140,9 @@ export default function MeetingList() {
                 ...formData,
                 scheduledAt: new Date(formData.scheduledAt).getTime(),
                 organizer: currentUser.id,
-                // Clean up empty optional fields
                 requirementId: formData.requirementId || undefined,
                 clientId: formData.clientId || undefined,
+                externalAttendees: formData.externalAttendees.length > 0 ? formData.externalAttendees : undefined,
             });
             toast.success("Meeting scheduled successfully!");
             setIsModalOpen(false);
@@ -92,8 +155,10 @@ export default function MeetingList() {
                 clientId: "",
                 requirementId: "",
                 attendees: [],
+                externalAttendees: [],
                 description: "",
             });
+            setExternalEmailInput("");
         } catch (error) {
             toast.error(error.message || "Failed to schedule meeting");
         } finally {
@@ -110,117 +175,136 @@ export default function MeetingList() {
     }, [userClient, currentUser.role]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-in fade-in duration-700 font-accent selection:bg-primary/20 selection:text-secondary">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-1">
                 <div>
-                    <h1 className="text-4xl font-black text-secondary tracking-tight font-primary">Meetings & Sync</h1>
-                    <p className="text-text-secondary font-black uppercase tracking-widest text-[10px] mt-1">Track and schedule your strategic alignment sessions.</p>
+                    <h1 className="text-5xl font-black text-secondary tracking-tighter font-primary leading-tight">Meetings & Sync</h1>
+                    <p className="text-primary font-black uppercase tracking-[0.2em] text-[10px] mt-2">Strategic alignment sessions and briefing history.</p>
                 </div>
 
                 {(currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'sales' || currentUser.role === 'client') && (
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="bg-secondary text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 shadow-lg shadow-secondary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                        className="bg-secondary text-white px-8 py-4 rounded-[1.5rem] font-black uppercase tracking-widest text-xs flex items-center gap-3 shadow-2xl shadow-secondary/10 hover:scale-[1.02] active:scale-[0.98] transition-all group"
                     >
-                        <Plus size={18} />
+                        <Plus size={20} className="text-primary group-hover:rotate-90 transition-transform" />
                         Schedule Briefing
                     </button>
                 )}
             </div>
 
             {/* Content Area */}
-            <div className="bg-card-bg rounded-[2.5rem] border border-border-accent shadow-sm overflow-hidden font-secondary">
-                <div className="p-6 border-b border-border-accent/30 flex items-center gap-4 bg-alt-bg/30">
-                    <div className="relative flex-1">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
+            <div className="bg-white rounded-[2.75rem] border border-border-accent shadow-2xl shadow-secondary/5 overflow-hidden">
+                <div className="p-8 border-b border-border-accent flex flex-col md:flex-row items-center gap-6 bg-main-bg/20">
+                    <div className="relative flex-1 w-full group">
+                        <Search size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within:text-primary transition-colors" />
                         <input
                             type="text"
                             placeholder="Filter briefing history..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-card-bg border border-border-accent/50 focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/30 transition-all font-bold text-sm text-secondary placeholder:text-text-secondary/20"
+                            className="w-full pl-16 pr-8 py-4 rounded-2xl bg-white border border-border-accent focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-bold text-sm text-secondary placeholder:text-text-secondary/20"
                         />
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                        <thead className="bg-alt-bg/50 text-text-secondary/60 text-[10px] font-black uppercase tracking-widest border-b border-border-accent/30">
+                        <thead className="bg-main-bg/50 text-text-secondary/40 text-[10px] font-black uppercase tracking-[0.2em] border-b border-border-accent">
                             <tr>
-                                <th className="px-8 py-5">Briefing Scope</th>
-                                <th className="px-8 py-5">Portfolio Account</th>
-                                <th className="px-8 py-5">Timeline</th>
-                                <th className="px-8 py-5">Attendees</th>
-                                <th className="px-8 py-5">Access</th>
-                                <th className="px-8 py-5 text-right">Status</th>
+                                <th className="px-10 py-6">Briefing Scope</th>
+                                <th className="px-10 py-6">Portfolio Account</th>
+                                <th className="px-10 py-6">Timeline</th>
+                                <th className="px-10 py-6">Personnel</th>
+                                <th className="px-10 py-6">Access</th>
+                                <th className="px-10 py-6 text-right">Status</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-border-accent">
                             {!meetings ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center text-slate-400 italic">Synchronizing meetings...</td>
+                                    <td colSpan="6" className="px-10 py-24 text-center">
+                                        <div className="flex flex-col items-center gap-3 opacity-20">
+                                            <Loader2 className="animate-spin text-secondary" size={32} />
+                                            <span className="font-black uppercase tracking-widest text-[10px]">Synchronizing...</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : meetings.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center text-slate-400">No meetings scheduled yet.</td>
+                                    <td colSpan="6" className="px-10 py-24 text-center">
+                                        <div className="flex flex-col items-center gap-3 opacity-20">
+                                            <Calendar size={40} className="text-secondary" />
+                                            <span className="font-black uppercase tracking-widest text-[10px]">Project history empty</span>
+                                        </div>
+                                    </td>
                                 </tr>
                             ) : meetings.map((meeting) => (
                                 <tr
                                     key={meeting._id}
-                                    className="hover:bg-header-bg/20 transition-colors group cursor-pointer border-b border-border-accent/20 last:border-0"
+                                    className="hover:bg-header-bg/10 transition-colors group cursor-pointer"
                                     onClick={() => navigate(`/meetings/${meeting._id}`)}
                                 >
-                                    <td className="px-8 py-6">
-                                        <div className="font-black text-secondary group-hover:text-primary transition-colors uppercase tracking-tight text-sm">{meeting.title}</div>
-                                        <div className="text-[10px] text-text-secondary/60 mt-1 uppercase font-bold tracking-widest">{meeting.type.replace('-', ' ')}</div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                        <div className="text-xs font-black text-secondary/80 uppercase tracking-tight">{meeting.companyName}</div>
-                                        <div className="text-[10px] text-text-secondary/40 mt-1 uppercase font-bold tracking-widest">{meeting.requirementName}</div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="text-sm font-bold text-slate-800">
-                                            {new Date(meeting.scheduledAt).toLocaleDateString()}
+                                    <td className="px-10 py-8">
+                                        <div className="font-black text-secondary group-hover:text-primary transition-colors uppercase tracking-tight text-base leading-tight">{meeting.title}</div>
+                                        <div className="text-[10px] text-text-secondary/50 mt-2 uppercase font-black tracking-widest flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
+                                            {meeting.type.replace('-', ' ')}
                                         </div>
-                                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                            <Clock size={12} />
+                                    </td>
+                                    <td className="px-10 py-8">
+                                        <div className="text-xs font-black text-secondary uppercase tracking-tight">{meeting.companyName}</div>
+                                        <div className="text-[10px] text-text-secondary/40 mt-1 uppercase font-bold tracking-widest truncate max-w-[150px]">{meeting.requirementName || "General Sync"}</div>
+                                    </td>
+                                    <td className="px-10 py-8">
+                                        <div className="text-sm font-black text-secondary mb-1">
+                                            {new Date(meeting.scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </div>
+                                        <div className="text-[10px] text-text-secondary font-black uppercase tracking-widest flex items-center gap-2 px-2 py-1 bg-alt-bg/50 rounded-lg w-fit">
+                                            <Clock size={10} className="text-primary" />
                                             {new Date(meeting.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            <span>({meeting.duration} min)</span>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-sm">
-                                        <div className="flex -space-x-2 overflow-hidden">
-                                            {meeting.attendeesWithDetails?.map((a, i) => (
+                                    <td className="px-10 py-8 text-sm">
+                                        <div className="flex -space-x-3 overflow-hidden">
+                                            {meeting.attendeesWithDetails?.slice(0, 4).map((a, i) => (
                                                 <div
                                                     key={i}
                                                     title={a.name}
-                                                    className="inline-block h-8 w-8 rounded-full ring-2 ring-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600"
+                                                    className="h-9 w-9 rounded-2xl ring-4 ring-white bg-secondary flex items-center justify-center text-[10px] font-black text-primary border border-white/10"
                                                 >
                                                     {a.name?.charAt(0) || '?'}
                                                 </div>
                                             ))}
+                                            {(meeting.attendeesWithDetails?.length || 0) > 4 && (
+                                                <div className="h-9 w-9 rounded-2xl ring-4 ring-white bg-alt-bg flex items-center justify-center text-[10px] font-black text-text-secondary border border-white/10">
+                                                    +{(meeting.attendeesWithDetails?.length || 0) - 4}
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
-                                    <td className="px-8 py-6">
+                                    <td className="px-10 py-8">
                                         {meeting.location ? (
                                             <a
                                                 href={meeting.location.startsWith('http') ? meeting.location : `https://${meeting.location}`}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                className="text-primary hover:text-primary-dark font-black tracking-widest text-[10px] flex items-center gap-1.5 uppercase transition-colors"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/5 group/btn"
                                             >
-                                                <Video size={14} />
-                                                Video Link
+                                                <Video size={18} className="group-hover/btn:scale-110 transition-transform" />
                                             </a>
                                         ) : (
-                                            <span className="text-text-secondary/20 text-[10px] uppercase font-bold">In-Person</span>
+                                            <div className="h-10 w-10 rounded-2xl bg-alt-bg/50 text-text-secondary/30 flex items-center justify-center border border-dashed border-border-accent">
+                                                <MapPin size={16} />
+                                            </div>
                                         )}
                                     </td>
-                                    <td className="px-8 py-6 text-right">
-                                        <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${meeting.status === 'scheduled' ? 'bg-primary/10 text-primary' :
-                                            meeting.status === 'completed' ? 'bg-success/10 text-success' :
-                                                'bg-alt-bg text-text-secondary'
+                                    <td className="px-10 py-8 text-right">
+                                        <span className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] shadow-sm border ${meeting.status === 'scheduled' ? 'bg-header-bg/50 text-primary border-primary/10' :
+                                            meeting.status === 'completed' ? 'bg-success/5 text-success border-success/10' :
+                                                'bg-alt-bg text-text-secondary border-border-accent'
                                             }`}>
                                             {meeting.status}
                                         </span>
@@ -234,113 +318,125 @@ export default function MeetingList() {
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in duration-300">
-                        <div className="sticky top-0 bg-white px-8 py-6 border-b border-slate-100 flex items-center justify-between z-10">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-secondary/80 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="bg-main-bg w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[3rem] shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-8 duration-500 relative scrollbar-hide border border-white/10">
+                        {/* Modal Header */}
+                        <div className="sticky top-0 bg-white/90 backdrop-blur-md px-10 py-8 border-b border-border-accent flex items-center justify-between z-20">
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900">Schedule New Meeting</h3>
-                                <p className="text-slate-500 text-sm">Fill in details for the sync session.</p>
+                                <h3 className="text-3xl font-black text-secondary tracking-tighter font-primary leading-tight">Strategic Briefing</h3>
+                                <p className="text-primary font-black uppercase tracking-widest text-[9px] mt-1">Initialize a new session in the tactical pipeline.</p>
                             </div>
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                                <X size={24} className="text-slate-400" />
+                            <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 flex items-center justify-center bg-alt-bg hover:bg-primary hover:text-white rounded-[1.25rem] transition-all text-text-secondary group rotate-0 hover:rotate-90">
+                                <X size={24} />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2 md:col-span-2">
-                                    <label className="text-sm font-bold text-slate-700">Meeting Title *</label>
+                        <form onSubmit={handleSubmit} className="p-10 space-y-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-3 md:col-span-2">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Briefing Title</label>
                                     <input
                                         required
                                         name="title"
-                                        placeholder="Weekly Progress Review"
+                                        placeholder="Project X - Strategic Milestone Review"
                                         value={formData.title}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/20"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all font-black text-secondary placeholder:text-text-secondary/20 shadow-inner"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Meeting Type</label>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1 text-primary">Mission Type</label>
                                     <select
                                         name="type"
                                         value={formData.type}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all cursor-pointer focus:border-primary/40 focus:ring-4 focus:ring-primary/5 appearance-none"
                                     >
-                                        <option value="sales-call">Sales Call</option>
-                                        <option value="kickoff">Kickoff Call</option>
-                                        <option value="status-update">Status Update</option>
-                                        <option value="review">Review</option>
-                                        <option value="general">General</option>
-                                        <option value="other">Other</option>
+                                        <option value="sales-call">Tactical Sales Call</option>
+                                        <option value="kickoff">Strategic Kickoff</option>
+                                        <option value="status-update">Sync / Progress</option>
+                                        <option value="review">Quality Assessment</option>
+                                        <option value="general">Standard Briefing</option>
+                                        <option value="other">Misc. Ops</option>
                                     </select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Google Meet Link</label>
-                                    <div className="relative">
-                                        <Video size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            name="location"
-                                            placeholder="meet.google.com/xxx-xxxx-xxx"
-                                            value={formData.location}
-                                            onChange={handleInputChange}
-                                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Date & Time *</label>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Timeline Placement</label>
                                     <input
                                         required
                                         type="datetime-local"
                                         name="scheduledAt"
                                         value={formData.scheduledAt}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Duration (Minutes)</label>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Communication Channel</label>
+                                    <div className="flex gap-4">
+                                        <div className="relative flex-1">
+                                            <Video size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-primary" />
+                                            <input
+                                                readOnly
+                                                name="location"
+                                                placeholder="Encrypted Link Required"
+                                                value={formData.location}
+                                                className="w-full pl-14 pr-6 py-4 rounded-[1.25rem] border border-border-accent bg-alt-bg text-secondary font-black text-sm cursor-not-allowed opacity-60"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateLink}
+                                            disabled={isGenerating || !formData.title || !formData.scheduledAt}
+                                            className="px-6 py-4 bg-secondary text-primary rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-30 disabled:hover:scale-100"
+                                        >
+                                            {isGenerating ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
+                                            {isGenerating ? "Deploying..." : "Provision Link"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Session Length (Min)</label>
                                     <input
                                         type="number"
                                         name="duration"
                                         value={formData.duration}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Client *</label>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Portfolio Account</label>
                                     <select
                                         required
                                         name="clientId"
                                         value={formData.clientId}
                                         onChange={handleInputChange}
                                         disabled={currentUser.role === 'client'}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all cursor-pointer disabled:opacity-40 appearance-none focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
                                     >
-                                        <option value="">Select a Client</option>
+                                        <option value="">Select Target Client</option>
                                         {clients?.map(c => (
                                             <option key={c._id} value={c._id}>{c.companyName}</option>
                                         ))}
                                     </select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-slate-700">Requirement</label>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Associated Objective</label>
                                     <select
                                         name="requirementId"
                                         value={formData.requirementId}
                                         onChange={handleInputChange}
                                         disabled={!formData.clientId}
-                                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                                        className="w-full px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all cursor-pointer disabled:opacity-40 appearance-none focus:border-primary/40 focus:ring-4 focus:ring-primary/5"
                                     >
-                                        <option value="">Select Requirement (Optional)</option>
+                                        <option value="">Full Project Sync</option>
                                         {selectedRequirements?.map(r => (
                                             <option key={r._id} value={r._id}>{r.requirementName}</option>
                                         ))}
@@ -349,56 +445,92 @@ export default function MeetingList() {
                             </div>
 
                             <div className="space-y-4">
-                                <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                                    <UsersIcon size={16} className="text-blue-500" />
-                                    Assign Attendees (Admin & Employees)
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
+                                    <UsersIcon size={18} className="text-primary" />
+                                    Active Personnel Assignment
                                 </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200 max-h-48 overflow-y-auto">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-8 bg-white border border-border-accent rounded-[2rem] max-h-56 overflow-y-auto shadow-inner">
                                     {staff?.map(person => (
                                         <button
                                             key={person._id}
                                             type="button"
                                             onClick={() => toggleAttendee(person._id)}
-                                            className={`p-2.5 rounded-xl text-left text-xs font-bold transition-all border flex items-center justify-between ${formData.attendees.find(a => a.userId === person._id)
-                                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100"
-                                                : "bg-white border-slate-200 text-slate-700 hover:border-blue-400"
+                                            className={`p-3.5 rounded-xl text-left text-[11px] font-black uppercase tracking-widest transition-all border flex items-center justify-between group ${formData.attendees.find(a => a.userId === person._id)
+                                                ? "bg-secondary border-secondary text-primary shadow-xl shadow-secondary/20"
+                                                : "bg-main-bg border-transparent text-text-secondary/60 hover:border-primary/30"
                                                 }`}
                                         >
                                             <span className="truncate">{person.fullName}</span>
-                                            {formData.attendees.find(a => a.userId === person._id) && <CheckCircle2 size={12} />}
+                                            {formData.attendees.find(a => a.userId === person._id) && <CheckCircle2 size={12} className="text-primary" />}
                                         </button>
                                     ))}
                                 </div>
-                                <p className="text-[10px] text-slate-400 italic">Freelancers and Admins listed here are available for selection.</p>
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-700">Meeting Agenda / Internal Notes</label>
+                            {/* External Attendees */}
+                            <div className="space-y-6">
+                                <label className="text-[11px] font-black text-secondary uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
+                                    <Mail size={18} className="text-primary" />
+                                    External Stakeholders
+                                </label>
+                                <div className="flex gap-4">
+                                    <input
+                                        type="email"
+                                        placeholder="external.partner@company.com"
+                                        value={externalEmailInput}
+                                        onChange={(e) => setExternalEmailInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addExternalEmail(); } }}
+                                        className="flex-1 px-6 py-4 rounded-[1.25rem] border border-border-accent bg-white font-black text-secondary transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5 shadow-inner text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={addExternalEmail}
+                                        className="px-8 py-4 bg-header-bg text-primary border border-primary/10 rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-lg shadow-primary/5"
+                                    >
+                                        Enlist
+                                    </button>
+                                </div>
+                                {formData.externalAttendees.length > 0 && (
+                                    <div className="flex flex-wrap gap-3 p-6 bg-white border border-border-accent rounded-[2rem]">
+                                        {formData.externalAttendees.map(email => (
+                                            <span key={email} className="flex items-center gap-3 bg-secondary text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                                                {email}
+                                                <button type="button" onClick={() => removeExternalEmail(email)} className="text-primary hover:text-white transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-text-secondary uppercase tracking-[0.2em] ml-1">Internal Strategic Brief</label>
                                 <textarea
                                     name="description"
-                                    rows="3"
+                                    rows="4"
                                     value={formData.description}
                                     onChange={handleInputChange}
-                                    placeholder="Discuss timeline, deliverables and blockers..."
-                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 resize-none"
+                                    placeholder="Define primary objectives, deliverables, and confidential blockers..."
+                                    className="w-full px-6 py-4 rounded-[1.5rem] border border-border-accent bg-white font-black text-secondary transition-all focus:border-primary/40 focus:ring-4 focus:ring-primary/5 shadow-inner resize-none text-sm leading-relaxed"
                                 />
                             </div>
 
-                            <div className="pt-6 flex gap-3">
+                            <div className="pt-10 flex flex-col sm:flex-row gap-4">
                                 <button
                                     type="submit"
-                                    disabled={loading}
-                                    className="flex-1 bg-blue-600 text-white py-4 rounded-2xl font-bold font-sans shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    disabled={loading || !formData.location}
+                                    className="flex-1 bg-primary text-white py-6 rounded-[1.5rem] font-black uppercase tracking-[0.25em] text-xs shadow-2xl shadow-primary/20 hover:bg-primary-dark transition-all flex items-center justify-center gap-4 disabled:opacity-40 disabled:bg-slate-300 disabled:shadow-none hover:scale-[1.02] active:scale-[0.98]"
                                 >
                                     {loading ? <Loader2 className="animate-spin" size={20} /> : <Calendar size={20} />}
-                                    {loading ? "Scheduling..." : "Create Meeting"}
+                                    {loading ? "Initializing..." : formData.location ? "Confirm Deployment" : "Link Provision Required"}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setIsModalOpen(false)}
-                                    className="px-8 py-4 rounded-2xl font-bold text-slate-600 border border-slate-200 hover:bg-slate-50 transition-all"
+                                    className="px-10 py-6 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] text-text-secondary border border-border-accent hover:bg-alt-bg transition-all"
                                 >
-                                    Cancel
+                                    Abort
                                 </button>
                             </div>
                         </form>

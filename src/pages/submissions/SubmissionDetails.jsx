@@ -49,7 +49,7 @@ export default function SubmissionDetails() {
     const handleDownload = async (storageKey) => {
         setDownloading(storageKey);
         try {
-            const url = await getAction(api.files.getFileUrl)({ storageKey });
+            const url = await getFileUrl({ storageKey });
             window.open(url, '_blank');
         } catch (error) {
             console.error(error);
@@ -153,7 +153,7 @@ export default function SubmissionDetails() {
                         </div>
 
                         <div className="space-y-6">
-                            <div className="bg-alt-bg/30 p-6 rounded-[2rem] border border-border-accent/10">
+                            <div className="bg-alt-bg/30 p-8 rounded-4xl border border-border-accent/10">
                                 <h4 className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest mb-3">Executive Summary</h4>
                                 <p className="text-secondary font-bold leading-relaxed whitespace-pre-wrap">{submission.description || "No description provided."}</p>
                             </div>
@@ -168,7 +168,7 @@ export default function SubmissionDetails() {
                                                     <FileText size={18} />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-black text-secondary truncate uppercase tracking-tight">Part #{idx + 1}</p>
+                                                    <p className="text-xs font-black text-secondary truncate tracking-tight uppercase">Part #{idx + 1}</p>
                                                     <p className="text-[9px] font-black text-text-secondary/40 uppercase tracking-widest">Asset</p>
                                                 </div>
                                             </div>
@@ -182,7 +182,7 @@ export default function SubmissionDetails() {
                                         </div>
                                     ))}
                                     {(!submission.deliverables || submission.deliverables.length === 0) && (
-                                        <div className="col-span-full py-12 text-center bg-alt-bg/30 rounded-[2rem] border-2 border-dashed border-border-accent/40 flex flex-col items-center gap-3">
+                                        <div className="col-span-full py-12 text-center bg-alt-bg/30 rounded-4xl border-2 border-dashed border-border-accent/40 flex flex-col items-center gap-3">
                                             <AlertCircle size={32} className="text-text-secondary/20" />
                                             <p className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest">No external assets attached.</p>
                                         </div>
@@ -300,7 +300,7 @@ export default function SubmissionDetails() {
 
                     {/* Post-Review Result */}
                     {submission.status !== "pending" && submission.status !== "under-review" && (
-                        <div className={`rounded-[2.5rem] p-8 space-y-6 border shadow-sm ${submission.status === "approved" ? "bg-success/5 border-success/20" :
+                        <div className={`rounded-4xl p-8 space-y-6 border shadow-sm ${submission.status === "approved" ? "bg-success/5 border-success/20" :
                             submission.status === "rejected" ? "bg-error/5 border-error/20" :
                                 "bg-primary/5 border-primary/20"
                             }`}>
@@ -310,10 +310,10 @@ export default function SubmissionDetails() {
                                     }`}>
                                     <ClipboardList size={20} />
                                 </div>
-                                <h3 className="text-xl font-black text-secondary tracking-tight uppercase tracking-widest font-primary">Review Verdict</h3>
+                                <h3 className="text-xl font-black text-secondary uppercase tracking-widest font-primary">Review Verdict</h3>
                             </div>
                             <div className="space-y-6">
-                                <div className="bg-card-bg p-6 rounded-[2rem] border border-border-accent/10 shadow-inner">
+                                <div className="bg-card-bg p-6 rounded-4xl border border-border-accent/10 shadow-inner">
                                     <p className="text-[10px] font-black text-text-secondary/40 uppercase tracking-widest mb-2">Technical Analysis</p>
                                     <p className="text-sm font-bold text-secondary leading-relaxed">{submission.reviewNotes || "No detailed notes provided."}</p>
                                 </div>

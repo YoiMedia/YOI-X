@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as clients from "../clients.js";
 import type * as debug from "../debug.js";
+import type * as documents from "../documents.js";
 import type * as feedbacks from "../feedbacks.js";
 import type * as files from "../files.js";
 import type * as leads from "../leads.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   clients: typeof clients;
   debug: typeof debug;
+  documents: typeof documents;
   feedbacks: typeof feedbacks;
   files: typeof files;
   leads: typeof leads;

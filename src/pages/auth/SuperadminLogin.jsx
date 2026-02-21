@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, Mail, Lock, Loader2 } from "lucide-react";
+import { ShieldCheck, Mail, Lock, Loader2, ArrowRight } from "lucide-react";
 import { login } from "../../services/auth.service";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
+import { useAction } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 export default function SuperadminLogin() {
     const [email, setEmail] = useState("");
@@ -10,76 +12,75 @@ export default function SuperadminLogin() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    const verifyLogin = useAction(api.users.verifyLogin);
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // Artificial delay for feel
-            await new Promise((resolve) => setTimeout(resolve, 800));
+            const user = await verifyLogin({ email, password });
 
-            // Hardcoded credentials for superadmin
-            if (email === "superadmin@flowx.com" && password === "flowx@2025") {
-                const superadminUser = {
-                    id: "superadmin-root",
-                    name: "Primary Superadmin",
-                    email: "superadmin@flowx.com",
-                    role: "superadmin",
-                    phone: "N/A"
-                };
-                login(superadminUser);
-                toast.success("Welcome back, Master Admin!");
+            if (user) {
+                if (user.role !== "superadmin") {
+                    throw new Error("Unauthorized: Access restricted to Superadmins.");
+                }
+                login(user); // user already has safe details (id, name, email, role, phone)
+                toast.success(`Welcome back, Master Admin!`);
                 window.location.href = "/";
-            } else {
-                toast.error("Invalid Master Key or Email");
             }
         } catch (error) {
-            toast.error("Portal access failed");
+            toast.error(error.message || "Invalid Master Key or Email");
         } finally {
             setLoading(false);
         }
     };
 
+    const inputClass = "w-full pl-14 pr-6 py-4 bg-main-bg/30 border border-border-accent rounded-[1.25rem] focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all text-sm font-bold placeholder:text-text-secondary/30";
+    const labelClass = "text-[11px] font-black text-text-secondary uppercase tracking-widest ml-1 mb-2.5 block";
+
     return (
-        <div className="min-h-screen bg-main-bg flex items-center justify-center p-4 font-secondary">
-            <div className="w-full max-w-md">
+        <div className="min-h-screen bg-main-bg flex items-center justify-center p-6 font-accent selection:bg-primary/20 selection:text-secondary">
+            <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-500">
                 {/* Logo/Brand */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl shadow-lg shadow-primary/20 mb-4 animate-bounce">
-                        <ShieldCheck size={32} className="text-white" />
+                <div className="text-center mb-10">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-secondary rounded-[2.5rem] shadow-2xl shadow-secondary/10 mb-6 group hover:scale-105 transition-transform duration-500">
+                        <ShieldCheck size={36} className="text-primary group-hover:rotate-12 transition-transform" />
                     </div>
-                    <h1 className="text-4xl font-black text-secondary font-primary tracking-tight">Yoi Media</h1>
-                    <p className="text-text-secondary mt-2 font-bold uppercase tracking-widest text-xs">Superadmin Control Center</p>
+                    <h1 className="text-5xl font-black text-secondary font-primary tracking-tighter leading-none">FlowX</h1>
+                    <p className="text-primary mt-3 font-black uppercase tracking-[0.25em] text-[10px]">Superadmin Command Center</p>
                 </div>
 
                 {/* Login Card */}
-                <div className="bg-card-bg rounded-3xl shadow-xl shadow-border-accent/40 p-8 border border-border-accent">
-                    <form onSubmit={handleLogin} className="space-y-6">
+                <div className="bg-white rounded-[2.75rem] shadow-2xl shadow-secondary/5 p-10 border border-white relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-primary" />
+
+                    <form onSubmit={handleLogin} className="space-y-8">
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-secondary ml-1">Email Address</label>
-                            <div className="relative">
-                                <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
+                            <label className={labelClass}>Admin Email</label>
+                            <div className="relative group">
+                                <Mail size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within:text-primary transition-colors" />
                                 <input
                                     type="email"
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-alt-bg border border-border-accent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
+                                    className={inputClass}
                                     placeholder="admin@yoimedia.fun"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-bold text-secondary ml-1">Password</label>
-                            <div className="relative">
-                                <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/50" />
+                            <label className={labelClass}>Security Master Key</label>
+                            <div className="relative group">
+                                <Lock size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-text-secondary/30 group-focus-within:text-primary transition-colors" />
                                 <input
                                     type="password"
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-alt-bg border border-border-accent rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-medium"
+                                    className={inputClass}
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -88,27 +89,38 @@ export default function SuperadminLogin() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:hover:scale-100"
+                            className="w-full py-5 bg-primary hover:bg-primary-dark text-white rounded-[1.5rem] font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-70 group"
                         >
                             {loading ? (
-                                <Loader2 size={20} className="animate-spin" />
+                                <Loader2 size={24} className="animate-spin" />
                             ) : (
-                                "Authorize Access"
+                                <>
+                                    <span>Verify & Authorize</span>
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-8 pt-6 border-t border-border-accent text-center">
-                        <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">
-                            Enterprise Grade Security • 256-bit Encryption
+                    <div className="mt-10 pt-8 border-t border-main-bg text-center">
+                        <p className="text-[9px] text-text-secondary/50 font-black uppercase tracking-[0.3em]">
+                            Enterprise Grade • 256-bit AES
                         </p>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <p className="text-center text-text-secondary text-[10px] mt-8 font-bold uppercase tracking-widest">
-                    © 2026 Yoi Media System Management
-                </p>
+                <div className="mt-12 flex flex-col items-center gap-6">
+                    <p className="text-center text-text-secondary/40 text-[10px] font-black uppercase tracking-[0.2em]">
+                        © 2026 Yoi Media Group
+                    </p>
+                    <button
+                        onClick={() => navigate("/landing")}
+                        className="text-[10px] font-black uppercase tracking-widest text-text-secondary/60 hover:text-primary transition-colors"
+                    >
+                        Return to Public Page
+                    </button>
+                </div>
             </div>
         </div>
     );

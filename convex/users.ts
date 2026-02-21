@@ -42,6 +42,14 @@ export const createUserInternal = internalMutation({
         email: v.string(),
         phone: v.string(),
         alternatePhone: v.optional(v.string()),
+        phoneNumbers: v.optional(
+            v.array(
+                v.object({
+                    number: v.string(),
+                    label: v.string(),
+                })
+            )
+        ),
         role: v.union(v.literal("admin"), v.literal("sales"), v.literal("employee")),
         passwordHash: v.string(),
     },
@@ -72,6 +80,14 @@ export const createUser = action({
         email: v.string(),
         phone: v.string(),
         alternatePhone: v.optional(v.string()),
+        phoneNumbers: v.optional(
+            v.array(
+                v.object({
+                    number: v.string(),
+                    label: v.string(),
+                })
+            )
+        ),
         role: v.union(v.literal("admin"), v.literal("sales"), v.literal("employee")),
         password: v.string(), // Mandatory now
     },
@@ -96,41 +112,28 @@ export const createClient = action({
     args: {
         fullName: v.string(),
         email: v.string(),
-        phone: v.string(),
-        username: v.string(),
-        website: v.string(),
-        address: v.object({
-            street: v.string(),
-            city: v.string(),
-            state: v.string(),
-            zipCode: v.string(),
-            country: v.string(),
-        }),
-        companyName: v.string(),
-        industry: v.optional(v.string()),
-        status: v.union(
-            v.literal("lead"),
-            v.literal("prospect"),
-            v.literal("active")
-        ),
         salesPersonId: v.id("users"),
     },
     handler: async (ctx, args): Promise<string> => {
-        const { companyName, industry, status, salesPersonId, ...userData } = args;
+        const { salesPersonId, ...userData } = args;
 
-        // 1. Create the user entry (role client)
+        // Check if email already exists
+        const existing = await ctx.runQuery(api.users.getUserByEmail, { email: args.email });
+        if (existing) throw new Error("A user with this email already exists.");
+
+        // 1. Create the user entry (role client) — minimal data only
         const userId: string = await ctx.runMutation(internal.clients.createUserForClient, {
-            ...userData,
+            fullName: userData.fullName,
+            email: userData.email,
             createdBy: salesPersonId,
         });
 
-        // 2. Create the client entry
+        // 2. Create the client entry with a placeholder company name
         const clientId: string = await ctx.runMutation(internal.clients.createClientEntry, {
             userId: userId as any,
             salesPersonId,
-            companyName,
-            industry,
-            status,
+            companyName: `${userData.fullName}'s Company`,
+            status: "active",
         });
 
         return clientId;
@@ -167,5 +170,78 @@ export const verifyLogin = action({
             role: user.role,
             phone: user.phone
         };
+    },
+});
+
+// Internal mutation to update password hash
+export const updatePasswordInternal = internalMutation({
+    args: {
+        userId: v.id("users"),
+        passwordHash: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.userId, {
+            passwordHash: args.passwordHash,
+            updatedAt: Date.now(),
+        });
+    },
+});
+
+// Action for superadmin to reset staff password
+export const resetUserPassword = action({
+    args: {
+        superadminId: v.id("users"),
+        targetUserId: v.id("users"),
+        newPassword: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // 1. Verify superadmin
+        const admin = await ctx.runQuery(api.users.getUserById, { userId: args.superadminId });
+        if (!admin || admin.role !== "superadmin") {
+            throw new Error("Unauthorized: Only superadmins can reset passwords.");
+        }
+
+        // 2. Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(args.newPassword, salt);
+
+        // 3. Update password
+        await ctx.runMutation(internal.users.updatePasswordInternal, {
+            userId: args.targetUserId,
+            passwordHash,
+        });
+
+        return { success: true };
+    },
+});
+
+// Mutation to clear password (for clients)
+export const clearUserPassword = mutation({
+    args: {
+        email: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.db
+            .query("users")
+            .withIndex("byEmail", (q) => q.eq("email", args.email))
+            .first();
+
+        if (!user) throw new Error("Account not found");
+        if (user.role !== "client") throw new Error("Only client passwords can be cleared via this flow.");
+
+        await ctx.db.patch(user._id, {
+            passwordHash: undefined,
+            updatedAt: Date.now(),
+        });
+
+        return { success: true };
+    },
+});
+
+// Simple query to get user by ID
+export const getUserById = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.userId);
     },
 });

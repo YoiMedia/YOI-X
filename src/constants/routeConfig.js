@@ -20,6 +20,9 @@ import Submissions from "../pages/submissions/Submissions";
 import SubmissionDetails from "../pages/submissions/SubmissionDetails";
 import FeedbackPage from "../pages/feedback/FeedbackPage";
 import Leads from "../pages/leads/Leads";
+import LeadProfile from "../pages/leads/LeadProfile";
+import Services from "../pages/services/Services";
+import Documents from "../pages/documents/Documents";
 
 export const publicRoutes = {
     auth: {
@@ -43,6 +46,14 @@ export const routeConfig = {
         allowedRoles: ["superadmin", "admin", "sales"],
         routes: [
             { path: "", component: Leads },
+            { path: ":id", component: LeadProfile },
+        ],
+    },
+    services: {
+        basePath: "services",
+        allowedRoles: ["superadmin", "admin", "sales"],
+        routes: [
+            { path: "", component: Services },
         ],
     },
     users: {
@@ -105,8 +116,8 @@ export const routeConfig = {
     },
     documents: {
         basePath: "documents",
-        allowedRoles: ["client"],
-        routes: [{ path: "", component: PlaceholderPage }],
+        allowedRoles: ["sales", "admin", "superadmin", "client"],
+        routes: [{ path: "", component: Documents }],
     },
     feedback: {
         basePath: "feedback",
